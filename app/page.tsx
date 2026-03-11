@@ -119,16 +119,25 @@ function getSvgElByKnownId(svgEl: SVGSVGElement, raw: string): SVGGraphicsElemen
   return null
 }
 
-function isJanelaVendaNaHora(now: Date) {
-  const h = now.getHours()
+function getNowBrasil(): Date {
+  return new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })
+  )
+}
+
+function isJanelaVendaNaHora(now?: Date) {
+  const current = now ?? getNowBrasil()
+  const h = current.getHours()
   return h >= 23 || h < 7
 }
 
-function getDataEventoOperacional(now: Date) {
-  const d = new Date(now)
+function getDataEventoOperacional(now?: Date) {
+  const d = new Date(now ?? getNowBrasil())
+
   if (d.getHours() < 7) {
     d.setDate(d.getDate() - 1)
   }
+
   return dateToISO(d)
 }
 
