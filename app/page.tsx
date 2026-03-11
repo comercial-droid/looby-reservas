@@ -57,7 +57,11 @@ function getExt(name: string) {
 }
 
 function isAllowedFile(file: File) {
-  return file.type.startsWith('image/') || file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+  return (
+    file.type.startsWith('image/') ||
+    file.type === 'application/pdf' ||
+    file.name.toLowerCase().endsWith('.pdf')
+  )
 }
 
 function formatBRPhoneMasked(raw: string) {
@@ -184,6 +188,21 @@ export default function Home() {
 
   const isReadOnlyHistorico = useMemo(() => isPastDateISO(dataEvento), [dataEvento])
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+
+    const algumModalAberto = modalOpen || detailsOpen
+    const originalOverflow = document.body.style.overflow
+
+    if (algumModalAberto) {
+      document.body.style.overflow = 'hidden'
+    }
+
+    return () => {
+      document.body.style.overflow = originalOverflow
+    }
+  }, [modalOpen, detailsOpen])
+
   const VALID_IDS = useMemo(() => {
     const mesas = [
       'vip-125',
@@ -296,7 +315,11 @@ export default function Home() {
 
       setUserId(u.id)
 
-      const { data: adminRow } = await supabase.from('admins').select('user_id').eq('user_id', u.id).maybeSingle()
+      const { data: adminRow } = await supabase
+        .from('admins')
+        .select('user_id')
+        .eq('user_id', u.id)
+        .maybeSingle()
 
       if (!active) return
 
@@ -353,7 +376,10 @@ export default function Home() {
   async function carregarReservasDoDia(dateISO: string) {
     setLoadingReservas(true)
 
-    const { data, error } = await supabase.from('reservas').select('*').eq('data_evento', dateISO)
+    const { data, error } = await supabase
+      .from('reservas')
+      .select('*')
+      .eq('data_evento', dateISO)
 
     if (error) {
       console.error(error)
@@ -406,7 +432,10 @@ export default function Home() {
 
   const totalReservasDia = useMemo(() => reservasAtivasDia.length, [reservasAtivasDia])
 
-  const pendentesCount = useMemo(() => reservasAtivasDia.filter((r) => normStatus(r.status) === 'pendente').length, [reservasAtivasDia])
+  const pendentesCount = useMemo(
+    () => reservasAtivasDia.filter((r) => normStatus(r.status) === 'pendente').length,
+    [reservasAtivasDia]
+  )
 
   const aprovadoVendaCount = useMemo(
     () => reservasAtivasDia.filter((r) => normStatus(r.status) === 'aprovado_venda').length,
@@ -548,7 +577,10 @@ export default function Home() {
     }
   }
 
-  function paintSvgNode(node: Element, paint: { fill: string; fillOpacity: string; stroke: string; strokeWidth: string }) {
+  function paintSvgNode(
+    node: Element,
+    paint: { fill: string; fillOpacity: string; stroke: string; strokeWidth: string }
+  ) {
     const tag = node.tagName.toLowerCase()
     if (!['circle', 'rect', 'path', 'ellipse', 'polygon'].includes(tag)) return
 
@@ -646,7 +678,10 @@ export default function Home() {
 
     if (strokeNode) {
       strokeNode.setAttribute('stroke', highlighted ? '#ffffff' : '#000000')
-      strokeNode.setAttribute('stroke-width', highlighted ? '6' : strokeNode.getAttribute('data-original-stroke-width') || '3')
+      strokeNode.setAttribute(
+        'stroke-width',
+        highlighted ? '6' : strokeNode.getAttribute('data-original-stroke-width') || '3'
+      )
     }
   }
 
@@ -984,11 +1019,13 @@ export default function Home() {
         const fileName = safeFileName(`${uuid}.${ext}`)
         const path = `observacoes/${dataEvento}/${selecionado.id}/${fileName}`
 
-        const { data: upData, error: upErr } = await supabase.storage.from('comprovantes').upload(path, anexoObs, {
-          upsert: false,
-          cacheControl: '3600',
-          contentType: anexoObs.type || undefined,
-        })
+        const { data: upData, error: upErr } = await supabase.storage
+          .from('comprovantes')
+          .upload(path, anexoObs, {
+            upsert: false,
+            cacheControl: '3600',
+            contentType: anexoObs.type || undefined,
+          })
 
         if (upErr) {
           console.error('UPLOAD ERROR:', upErr)
@@ -1013,44 +1050,44 @@ export default function Home() {
         observacao: observacao.trim(),
         comprovante_url: uploadedPath,
       }
-console.log('PAYLOAD RESERVA:', payload)
+
       console.log('PAYLOAD RESERVA:', payload)
 
-const { error } = await supabase.from('reservas').insert(payload)
+      const { error } = await supabase.from('reservas').insert(payload)
 
-   if (error) {
-  console.error('DB INSERT ERROR FULL:', {
-    message: error?.message,
-    details: error?.details,
-    hint: error?.hint,
-    code: error?.code,
-    full: error,
-  })
+      if (error) {
+        console.error('DB INSERT ERROR FULL:', {
+          message: error?.message,
+          details: error?.details,
+          hint: error?.hint,
+          code: error?.code,
+          full: error,
+        })
 
-  if (uploadedPath) {
-    const rm = await supabase.storage.from('comprovantes').remove([uploadedPath])
-    if (rm.error) console.warn('Falha ao remover arquivo órfão:', rm.error)
-  }
+        if (uploadedPath) {
+          const rm = await supabase.storage.from('comprovantes').remove([uploadedPath])
+          if (rm.error) console.warn('Falha ao remover arquivo órfão:', rm.error)
+        }
 
-  const msg = String(error?.message ?? '')
-  const details = String(error?.details ?? '')
-  const code = String(error?.code ?? '')
+        const msg = String(error?.message ?? '')
+        const details = String(error?.details ?? '')
+        const code = String(error?.code ?? '')
 
-  const isReservaDuplicada =
-    msg.includes('reservas_unicas_por_espaco_data') ||
-    details.includes('reservas_unicas_por_espaco_data') ||
-    code === '23505'
+        const isReservaDuplicada =
+          msg.includes('reservas_unicas_por_espaco_data') ||
+          details.includes('reservas_unicas_por_espaco_data') ||
+          code === '23505'
 
-  if (isReservaDuplicada) {
-    alert('Este espaço acabou de ser reservado por outro usuário.')
-  } else {
-    alert(
-      `Erro ao salvar a reserva.\n\nMensagem: ${error?.message ?? 'sem mensagem'}\nCódigo: ${error?.code ?? 'sem código'}`
-    )
-  }
+        if (isReservaDuplicada) {
+          alert('Este espaço acabou de ser reservado por outro usuário.')
+        } else {
+          alert(
+            `Erro ao salvar a reserva.\n\nMensagem: ${error?.message ?? 'sem mensagem'}\nCódigo: ${error?.code ?? 'sem código'}`
+          )
+        }
 
-  return
-}
+        return
+      }
 
       closeReservaModal()
       await carregarReservasDoDia(dataEvento)
@@ -1100,7 +1137,12 @@ const { error } = await supabase.from('reservas').insert(payload)
 
           <div className="mt-6 space-y-2">
             <label className={LABEL_CLASS}>Data do evento</label>
-            <input type="date" value={dataEvento} onChange={(e) => setDataEvento(e.target.value)} className={INPUT_CLASS} />
+            <input
+              type="date"
+              value={dataEvento}
+              onChange={(e) => setDataEvento(e.target.value)}
+              className={INPUT_CLASS}
+            />
 
             {isPastDateISO(dataEvento) ? (
               <p className="mt-2 text-xs text-amber-200">
@@ -1123,26 +1165,29 @@ const { error } = await supabase.from('reservas').insert(payload)
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#4f111a_0%,#18090c_45%,#090406_100%)] p-4 sm:p-6 text-red-50">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#4f111a_0%,#18090c_45%,#090406_100%)] p-4 text-red-50 sm:p-6">
       <div className="mx-auto max-w-[1400px]">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-6 border-b border-white/10 pb-4">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold flex items-center gap-3">
-                <img 
-                  src="/logo-looby.png" 
-                  alt="Looby"
-                  className="h-12 w-auto"
-                />
+              <h1 className="flex items-center gap-3 text-2xl font-bold">
+                <img src="/logo-looby.png" alt="Looby" className="h-12 w-auto" />
                 Mapa de Reservas
               </h1>
 
-              <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-red-50/85">{dataEvento}</span>
+              <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-red-50/85">
+                {dataEvento}
+              </span>
             </div>
 
-            <p className="mt-2 text-sm text-red-50/70">Clique em um espaço para solicitar reserva ou visualizar detalhes.</p>
+            <p className="mt-2 text-sm text-red-50/70">
+              Clique em um espaço para solicitar reserva ou visualizar detalhes.
+            </p>
 
-            <button onClick={() => setStep('DATA')} className="mt-2 text-sm text-red-50/70 underline underline-offset-4 hover:text-white">
+            <button
+              onClick={() => setStep('DATA')}
+              className="mt-2 text-sm text-red-50/70 underline underline-offset-4 hover:text-white"
+            >
               ← Escolher outra data
             </button>
           </div>
@@ -1249,9 +1294,9 @@ const { error } = await supabase.from('reservas').insert(payload)
                   ) : (
                     <>
                       Este dia possui <b className="text-white">{totalReservasDia}</b> reserva(s), sendo{' '}
-                      <b className="text-white">{pendentesCount}</b> pendente(s), <b className="text-white">{aprovadoVendaCount}</b>{' '}
-                      aprovada(s) por venda e <b className="text-white">{aprovadoCortesiaCount}</b> aprovada(s) por
-                      cortesia/aniversário.
+                      <b className="text-white">{pendentesCount}</b> pendente(s),{' '}
+                      <b className="text-white">{aprovadoVendaCount}</b> aprovada(s) por venda e{' '}
+                      <b className="text-white">{aprovadoCortesiaCount}</b> aprovada(s) por cortesia/aniversário.
                       <br />
                       Entre elas, há <b className="text-white">{mesasReservadasCount}</b> mesa(s) e{' '}
                       <b className="text-white">{camarotesReservadosCount}</b> camarote(s).
@@ -1260,7 +1305,9 @@ const { error } = await supabase.from('reservas').insert(payload)
                 </div>
               </div>
 
-              <div className="mt-4 text-xs text-red-50/55">Clique no mapa para solicitar uma reserva ou visualizar detalhes.</div>
+              <div className="mt-4 text-xs text-red-50/55">
+                Clique no mapa para solicitar uma reserva ou visualizar detalhes.
+              </div>
             </div>
           </div>
 
@@ -1372,75 +1419,89 @@ const { error } = await supabase.from('reservas').insert(payload)
         </div>
 
         {detailsOpen && detailsReserva ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
-            <button className="absolute inset-0 bg-black/55" onClick={closeDetailsModal} aria-label="Fechar" />
+          <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
+            <button className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={closeDetailsModal} aria-label="Fechar" />
 
-            <div className="relative mx-4 w-full max-w-lg rounded-2xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] p-6 text-red-50 shadow-2xl">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-semibold text-white">Detalhes da reserva</h2>
-                  <p className="mt-1 text-sm text-red-50/75">
-                    Data: <b className="text-white">{dataEvento}</b> • Espaço:{' '}
-                    <b className="text-white">{detailsReserva.espaco_id}</b>
-                  </p>
-                </div>
-
-                <button onClick={closeDetailsModal} className={PRIMARY_BTN}>
-                  Fechar
-                </button>
-              </div>
-
-              <div className="mt-5 space-y-3 text-sm">
-                {(() => {
-                  const chip = statusChip(detailsReserva)
-                  return (
-                    <div className="flex items-center gap-2">
-                      <span className={`rounded-full border px-2 py-1 text-[12px] ${chip.cls}`}>{chip.label}</span>
-                      <span className="text-red-50/35">•</span>
-                      <span className="text-red-50/85">
-                        Tipo: <b className="text-white">{tipoLabel(detailsReserva)}</b>
-                      </span>
+            <div className="fixed inset-0 flex items-center justify-center p-4">
+              <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] text-red-50 shadow-2xl">
+                <div className="max-h-[85vh] overflow-y-auto overscroll-contain p-5 sm:p-6">
+                  <div className="mb-5 flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-xl font-semibold text-white">Detalhes da reserva</h2>
+                      <p className="mt-1 text-sm text-red-50/75">
+                        Data: <b className="text-white">{dataEvento}</b> • Espaço:{' '}
+                        <b className="text-white">{detailsReserva.espaco_id}</b>
+                      </p>
                     </div>
-                  )
-                })()}
 
-                <div className="space-y-2 rounded-xl border border-white/10 bg-white/8 p-3">
-                  <div className="flex justify-between gap-3">
-                    <span className="text-red-50/60">Reservado por</span>
-                    <span className="text-right font-semibold text-white">{detailsReserva.nome}</span>
+                    <button onClick={closeDetailsModal} className={PRIMARY_BTN}>
+                      Fechar
+                    </button>
                   </div>
 
-                  <div className="flex justify-between gap-3">
-                    <span className="text-red-50/60">Telefone</span>
-                    <span className="text-right text-white">
-                      {isAdmin ? detailsReserva.telefone : formatBRPhoneMasked(detailsReserva.telefone)}
-                    </span>
-                  </div>
+                  <div className="space-y-3 text-sm">
+                    {(() => {
+                      const chip = statusChip(detailsReserva)
+                      return (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`rounded-full border px-2 py-1 text-[12px] ${chip.cls}`}>
+                            {chip.label}
+                          </span>
+                          <span className="text-red-50/35">•</span>
+                          <span className="text-red-50/85">
+                            Tipo: <b className="text-white">{tipoLabel(detailsReserva)}</b>
+                          </span>
+                        </div>
+                      )
+                    })()}
 
-                  {detailsReserva.tipo?.toLowerCase() === 'venda' ? (
-                    <>
+                    <div className="space-y-2 rounded-xl border border-white/10 bg-white/8 p-3">
                       <div className="flex justify-between gap-3">
-                        <span className="text-red-50/60">Valor da mesa/camarote</span>
-                        <span className="text-right text-white">{formatCurrencyBR(detailsReserva.valor_espaco)}</span>
+                        <span className="text-red-50/60">Reservado por</span>
+                        <span className="text-right font-semibold text-white">{detailsReserva.nome}</span>
                       </div>
 
                       <div className="flex justify-between gap-3">
-                        <span className="text-red-50/60">Sinal adiantado</span>
-                        <span className="text-right text-white">{formatCurrencyBR(detailsReserva.valor_sinal)}</span>
+                        <span className="text-red-50/60">Telefone</span>
+                        <span className="text-right text-white">
+                          {isAdmin ? detailsReserva.telefone : formatBRPhoneMasked(detailsReserva.telefone)}
+                        </span>
                       </div>
-                    </>
-                  ) : null}
 
-                  <div className="pt-2">
-                    <div className="mb-1 text-red-50/60">Observação</div>
-                    <div className="whitespace-pre-wrap break-words text-white">
-                      {isAdmin ? detailsReserva.observacao || '-' : detailsReserva.observacao ? '•••• (oculto)' : '-'}
+                      {detailsReserva.tipo?.toLowerCase() === 'venda' ? (
+                        <>
+                          <div className="flex justify-between gap-3">
+                            <span className="text-red-50/60">Valor da mesa/camarote</span>
+                            <span className="text-right text-white">
+                              {formatCurrencyBR(detailsReserva.valor_espaco)}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between gap-3">
+                            <span className="text-red-50/60">Sinal adiantado</span>
+                            <span className="text-right text-white">
+                              {formatCurrencyBR(detailsReserva.valor_sinal)}
+                            </span>
+                          </div>
+                        </>
+                      ) : null}
+
+                      <div className="pt-2">
+                        <div className="mb-1 text-red-50/60">Observação</div>
+                        <div className="whitespace-pre-wrap break-words text-white">
+                          {isAdmin
+                            ? detailsReserva.observacao || '-'
+                            : detailsReserva.observacao
+                              ? '•••• (oculto)'
+                              : '-'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-red-50/55">
+                      * Em usuário comum, telefone e observação ficam protegidos. No admin você vê tudo.
                     </div>
                   </div>
-                </div>
-
-                <div className="text-xs text-red-50/55">
-                  * Em usuário comum, telefone e observação ficam protegidos. No admin você vê tudo.
                 </div>
               </div>
             </div>
@@ -1448,116 +1509,138 @@ const { error } = await supabase.from('reservas').insert(payload)
         ) : null}
 
         {modalOpen && selecionado && !isReadOnlyHistorico ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
-            <button className="absolute inset-0 bg-black/55" onClick={closeReservaModal} aria-label="Fechar" />
+          <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
+            <button className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={closeReservaModal} aria-label="Fechar" />
 
-            <div className="relative mx-4 w-full max-w-lg rounded-2xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] p-6 text-red-50 shadow-2xl">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-semibold text-white">Solicitar reserva</h2>
-                  <p className="mt-1 text-sm text-red-50/75">
-                    Data: <b className="text-white">{dataEvento}</b> • Espaço:{' '}
-                    <b className="text-white">
-                      {selecionado.nome} ({selecionado.tipo})
-                    </b>
-                  </p>
+            <div className="fixed inset-0 flex items-center justify-center p-4">
+              <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] text-red-50 shadow-2xl">
+                <div className="max-h-[85vh] overflow-y-auto overscroll-contain p-5 sm:p-6">
+                  <div className="mb-5 flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-xl font-semibold text-white">Solicitar reserva</h2>
+                      <p className="mt-1 text-sm text-red-50/75">
+                        Data: <b className="text-white">{dataEvento}</b> • Espaço:{' '}
+                        <b className="text-white">
+                          {selecionado.nome} ({selecionado.tipo})
+                        </b>
+                      </p>
+                    </div>
+
+                    <button onClick={closeReservaModal} className={PRIMARY_BTN}>
+                      Fechar
+                    </button>
+                  </div>
+
+                  <form className="space-y-4" onSubmit={submitReserva}>
+                    <div>
+                      <label className={LABEL_CLASS}>Nome completo</label>
+                      <input
+                        value={nomeCompleto}
+                        onChange={(e) => setNomeCompleto(e.target.value)}
+                        className={INPUT_CLASS}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={LABEL_CLASS}>Telefone (WhatsApp)</label>
+                      <input
+                        value={telefone}
+                        onChange={(e) => setTelefone(e.target.value)}
+                        className={INPUT_CLASS}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={LABEL_CLASS}>Tipo</label>
+                      <select
+                        value={tipoReserva}
+                        onChange={(e) => setTipoReserva(e.target.value as ReservaTipo)}
+                        className={INPUT_CLASS}
+                      >
+                        <option value="ANIVERSARIO">Aniversário</option>
+                        <option value="CORTESIA">Cortesia</option>
+                        <option value="VENDA">Venda</option>
+                      </select>
+                    </div>
+
+                    {modeloPrecoObrigatorio ? (
+                      <div>
+                        <label className={LABEL_CLASS}>Modelo de preço</label>
+                        <select
+                          value={modeloPreco}
+                          onChange={(e) => setModeloPreco(e.target.value)}
+                          className={INPUT_CLASS}
+                        >
+                          <option value="">Selecione</option>
+
+                          {(isCamarote ? PRECOS_CAMAROTE : PRECOS_MESA).map((p) => (
+                            <option key={p} value={p}>
+                              {p}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : null}
+
+                    {valorSinalObrigatorio ? (
+                      <div>
+                        <label className={LABEL_CLASS}>Valor do sinal adiantado</label>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          step="0.01"
+                          value={valorSinal}
+                          onChange={(e) => setValorSinal(e.target.value)}
+                          className={INPUT_CLASS}
+                          placeholder="Ex: 300.00"
+                        />
+                        <p className={`mt-1 text-xs ${MUTED_TEXT}`}>
+                          Informe apenas o valor já pago antecipadamente.
+                        </p>
+                      </div>
+                    ) : null}
+
+                    <div>
+                      <label className={LABEL_CLASS}>Observação (obrigatório)</label>
+                      <textarea
+                        value={observacao}
+                        onChange={(e) => setObservacao(e.target.value.slice(0, 200))}
+                        maxLength={200}
+                        className="mt-1 min-h-[90px] w-full rounded-xl border border-red-950/40 bg-white/95 px-3 py-2 text-neutral-900 outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-700/20"
+                        placeholder="Até 200 caracteres (ou anexe um arquivo)."
+                      />
+                      <p className={`mt-1 text-xs ${MUTED_TEXT}`}>{observacao.length}/200</p>
+                    </div>
+
+                    <div>
+                      <label className={LABEL_CLASS}>Anexo da observação (opcional)</label>
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf"
+                        onChange={(e) => setAnexoObs(e.target.files?.[0] ?? null)}
+                        className="mt-2 block w-full text-sm text-red-50/80 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:font-semibold file:text-[#5b1019] hover:file:bg-red-50"
+                      />
+
+                      {anexoObs ? (
+                        <p className={`mt-2 text-xs ${MUTED_TEXT}`}>
+                          Arquivo: <b className="text-white">{anexoObs.name}</b>
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className={`w-full rounded-xl py-2 font-semibold transition ${
+                        saving ? 'bg-white/20 text-red-50/50' : 'bg-white text-[#5b1019] hover:bg-red-50'
+                      }`}
+                    >
+                      {saving ? 'Salvando...' : 'Enviar solicitação (aguardando confirmação)'}
+                    </button>
+                  </form>
                 </div>
-
-                <button onClick={closeReservaModal} className={PRIMARY_BTN}>
-                  Fechar
-                </button>
               </div>
-
-              <form className="mt-5 space-y-4" onSubmit={submitReserva}>
-                <div>
-                  <label className={LABEL_CLASS}>Nome completo</label>
-                  <input value={nomeCompleto} onChange={(e) => setNomeCompleto(e.target.value)} className={INPUT_CLASS} />
-                </div>
-
-                <div>
-                  <label className={LABEL_CLASS}>Telefone (WhatsApp)</label>
-                  <input value={telefone} onChange={(e) => setTelefone(e.target.value)} className={INPUT_CLASS} />
-                </div>
-
-                <div>
-                  <label className={LABEL_CLASS}>Tipo</label>
-                  <select value={tipoReserva} onChange={(e) => setTipoReserva(e.target.value as ReservaTipo)} className={INPUT_CLASS}>
-                    <option value="ANIVERSARIO">Aniversário</option>
-                    <option value="CORTESIA">Cortesia</option>
-                    <option value="VENDA">Venda</option>
-                  </select>
-                </div>
-
-                {modeloPrecoObrigatorio ? (
-                  <div>
-                    <label className={LABEL_CLASS}>Modelo de preço</label>
-                    <select value={modeloPreco} onChange={(e) => setModeloPreco(e.target.value)} className={INPUT_CLASS}>
-                      <option value="">Selecione</option>
-
-                      {(isCamarote ? PRECOS_CAMAROTE : PRECOS_MESA).map((p) => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : null}
-
-                {valorSinalObrigatorio ? (
-                  <div>
-                    <label className={LABEL_CLASS}>Valor do sinal adiantado</label>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      step="0.01"
-                      value={valorSinal}
-                      onChange={(e) => setValorSinal(e.target.value)}
-                      className={INPUT_CLASS}
-                      placeholder="Ex: 300.00"
-                    />
-                    <p className={`mt-1 text-xs ${MUTED_TEXT}`}>Informe apenas o valor já pago antecipadamente.</p>
-                  </div>
-                ) : null}
-
-                <div>
-                  <label className={LABEL_CLASS}>Observação (obrigatório)</label>
-                  <textarea
-                    value={observacao}
-                    onChange={(e) => setObservacao(e.target.value.slice(0, 200))}
-                    maxLength={200}
-                    className="mt-1 min-h-[90px] w-full rounded-xl border border-red-950/40 bg-white/95 px-3 py-2 text-neutral-900 outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-700/20"
-                    placeholder="Até 200 caracteres (ou anexe um arquivo)."
-                  />
-                  <p className={`mt-1 text-xs ${MUTED_TEXT}`}>{observacao.length}/200</p>
-                </div>
-
-                <div>
-                  <label className={LABEL_CLASS}>Anexo da observação (opcional)</label>
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={(e) => setAnexoObs(e.target.files?.[0] ?? null)}
-                    className="mt-2 block w-full text-sm text-red-50/80 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:font-semibold file:text-[#5b1019] hover:file:bg-red-50"
-                  />
-
-                  {anexoObs ? (
-                    <p className={`mt-2 text-xs ${MUTED_TEXT}`}>
-                      Arquivo: <b className="text-white">{anexoObs.name}</b>
-                    </p>
-                  ) : null}
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className={`w-full rounded-xl py-2 font-semibold transition ${
-                    saving ? 'bg-white/20 text-red-50/50' : 'bg-white text-[#5b1019] hover:bg-red-50'
-                  }`}
-                >
-                  {saving ? 'Salvando...' : 'Enviar solicitação (aguardando confirmação)'}
-                </button>
-              </form>
             </div>
           </div>
         ) : null}
