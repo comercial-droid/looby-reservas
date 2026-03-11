@@ -4,6 +4,41 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 
+async function garantirProfile(user: any) {
+  if (!user?.id) return
+
+  const { data: existingProfile, error: selectError } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (selectError) {
+    console.error('Erro ao verificar profile:', selectError)
+    return
+  }
+
+  if (existingProfile) return
+
+  const nomeMeta =
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    user.user_metadata?.nome ||
+    ''
+
+  const nomeFinal = String(nomeMeta || user.email || 'Usuário').trim()
+
+  const { error: insertError } = await supabase.from('profiles').insert({
+    id: user.id,
+    full_name: nomeFinal,
+    role: 'user',
+  })
+
+  if (insertError) {
+    console.error('Erro ao criar profile automaticamente:', insertError)
+  }
+}
+
 function LoginContent() {
   const router = useRouter()
   const sp = useSearchParams()
@@ -15,9 +50,16 @@ function LoginContent() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) router.push(next)
-    })
+    async function checkUser() {
+      const { data } = await supabase.auth.getUser()
+
+      if (data.user) {
+        await garantirProfile(data.user)
+        router.push(next)
+      }
+    }
+
+    checkUser()
   }, [router, next])
 
   async function handleLogin(e: React.FormEvent) {
@@ -34,6 +76,14 @@ function LoginContent() {
       if (error) {
         setErrorMsg(error.message)
         return
+      }
+
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+
+      if (userError) {
+        console.error('Erro ao buscar usuário após login:', userError)
+      } else if (userData.user) {
+        await garantirProfile(userData.user)
       }
 
       router.push(next)
@@ -79,7 +129,7 @@ function LoginContent() {
           <button
             type="button"
             onClick={() => router.push('/forgot-password')}
-            className="text-sm text-neutral-600 underline underline-offset-4 hover:text-neutral-900"
+            className="text-sm text-neutral-400 underline underline-offset-4 hover:text-white"
           >
             Esqueci minha senha
           </button>
