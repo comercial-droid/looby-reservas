@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter()
   const sp = useSearchParams()
   const next = sp.get('next') || '/'
@@ -25,15 +25,18 @@ export default function LoginPage() {
     e.preventDefault()
     setErrorMsg(null)
     setLoading(true)
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       })
+
       if (error) {
         setErrorMsg(error.message)
         return
       }
+
       router.push(next)
     } finally {
       setLoading(false)
@@ -46,7 +49,11 @@ export default function LoginPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Entrar</h1>
         <p className="mt-1 text-sm text-white/60">Acesse para solicitar reservas.</p>
 
-        {errorMsg ? <div className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{errorMsg}</div> : null}
+        {errorMsg && (
+          <div className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">
+            {errorMsg}
+          </div>
+        )}
 
         <form className="mt-6 space-y-4" onSubmit={handleLogin}>
           <div>
@@ -69,18 +76,22 @@ export default function LoginPage() {
               autoComplete="current-password"
             />
           </div>
-<button
-  type="button"
-  onClick={() => router.push('/forgot-password')}
-  className="text-sm text-neutral-600 underline underline-offset-4 hover:text-neutral-900"
->
-  Esqueci minha senha
-</button>
+
+          <button
+            type="button"
+            onClick={() => router.push('/forgot-password')}
+            className="text-sm text-neutral-600 underline underline-offset-4 hover:text-neutral-900"
+          >
+            Esqueci minha senha
+          </button>
+
           <button
             type="submit"
             disabled={loading}
             className={`w-full rounded-xl py-2 text-sm font-semibold ${
-              loading ? 'bg-neutral-700 text-neutral-300' : 'bg-white text-black hover:bg-neutral-200'
+              loading
+                ? 'bg-neutral-700 text-neutral-300'
+                : 'bg-white text-black hover:bg-neutral-200'
             }`}
           >
             {loading ? 'Entrando...' : 'Entrar'}
@@ -96,5 +107,13 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
   )
 }
