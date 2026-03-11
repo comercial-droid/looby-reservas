@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -8,7 +8,7 @@ function cleanName(s: string) {
   return s.replace(/\s+/g, ' ').trim()
 }
 
-export default function SignupPage() {
+function SignupContent() {
   const router = useRouter()
   const sp = useSearchParams()
   const next = sp.get('next') || '/'
@@ -22,7 +22,6 @@ export default function SignupPage() {
   const [infoMsg, setInfoMsg] = useState<string | null>(null)
 
   useEffect(() => {
-    // se já estiver logado, manda pro next
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) router.push(next)
     })
@@ -40,12 +39,11 @@ export default function SignupPage() {
 
     setLoading(true)
     try {
-      // 1) Cria usuário no Auth e grava nome em user_metadata também (opcional, mas útil)
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
-          data: { full_name: name }, // user_metadata
+          data: { full_name: name },
         },
       })
 
@@ -54,16 +52,12 @@ export default function SignupPage() {
         return
       }
 
-      // Em alguns setups, o signUp pode exigir confirmação por e-mail.
-      // Se não houver sessão imediatamente, a gente mostra aviso.
       const user = data.user
       if (!user) {
         setInfoMsg('Conta criada. Verifique seu e-mail para confirmar o cadastro e então faça login.')
         return
       }
 
-      // 2) Cria/atualiza o profile (id = auth.user.id)
-      // Se RLS estiver correta, isso funciona logado.
       const { error: pErr } = await supabase.from('profiles').upsert(
         {
           id: user.id,
@@ -74,16 +68,14 @@ export default function SignupPage() {
       )
 
       if (pErr) {
-        // Não vamos travar o usuário; mas registramos o erro
-       console.error('profiles upsert error:', {
-  message: pErr.message,
-  details: pErr.details,
-  hint: pErr.hint,
-  code: pErr.code,
-})
+        console.error('profiles upsert error:', {
+          message: pErr.message,
+          details: pErr.details,
+          hint: pErr.hint,
+          code: pErr.code,
+        })
       }
 
-      // 3) Redireciona
       router.push(next)
     } finally {
       setLoading(false)
@@ -96,8 +88,17 @@ export default function SignupPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Criar conta</h1>
         <p className="mt-1 text-sm text-white/60">Cadastre seu usuário para solicitar reservas.</p>
 
-        {errorMsg ? <div className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{errorMsg}</div> : null}
-        {infoMsg ? <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-white/70">{infoMsg}</div> : null}
+        {errorMsg ? (
+          <div className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">
+            {errorMsg}
+          </div>
+        ) : null}
+
+        {infoMsg ? (
+          <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-white/70">
+            {infoMsg}
+          </div>
+        ) : null}
 
         <form className="mt-6 space-y-4" onSubmit={handleSignup}>
           <div>
@@ -154,5 +155,13 @@ export default function SignupPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupContent />
+    </Suspense>
   )
 }
