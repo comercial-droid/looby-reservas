@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 type EspacoTipo = 'MESA' | 'CAMAROTE'
 type Espaco = { id: string; nome: string; tipo: EspacoTipo }
 
-type ReservaTipo = 'ANIVERSARIO' | 'CORTESIA' | 'VENDA'
+type ReservaTipo = 'ANIVERSARIO' | 'CORTESIA' | 'VENDA' | 'NA_HORA'
 
 type ReservaRow = {
   id: string | number
@@ -34,6 +34,13 @@ function todayISO() {
   return `${yyyy}-${mm}-${dd}`
 }
 
+function dateToISO(d: Date) {
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
 function isPastDateISO(dateISO: string) {
   return String(dateISO || '') < todayISO()
 }
@@ -43,6 +50,10 @@ function onlyDigits(s: string) {
 }
 
 function normStatus(s?: string | null) {
+  return (s ?? '').toString().trim().toLowerCase()
+}
+
+function normTipo(s?: string | null) {
   return (s ?? '').toString().trim().toLowerCase()
 }
 
@@ -108,6 +119,19 @@ function getSvgElByKnownId(svgEl: SVGSVGElement, raw: string): SVGGraphicsElemen
   return null
 }
 
+function isJanelaVendaNaHora(now: Date) {
+  const h = now.getHours()
+  return h >= 23 || h < 7
+}
+
+function getDataEventoOperacional(now: Date) {
+  const d = new Date(now)
+  if (d.getHours() < 7) {
+    d.setDate(d.getDate() - 1)
+  }
+  return dateToISO(d)
+}
+
 const PRECOS_CAMAROTE = [
   'Camarote 3000/1600 consumação',
   'Camarote 4000/2500 consumação',
@@ -149,6 +173,7 @@ export default function Home() {
   const [isAdmin, setIsAdmin] = useState(false)
 
   const [step, setStep] = useState<'DATA' | 'MAPA'>('DATA')
+  const [now, setNow] = useState<Date>(new Date())
   const [dataEvento, setDataEvento] = useState<string>(todayISO())
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -186,7 +211,33 @@ export default function Home() {
 
   const [isTouchDevice, setIsTouchDevice] = useState(false)
 
-  const isReadOnlyHistorico = useMemo(() => isPastDateISO(dataEvento), [dataEvento])
+  const vendaNaHoraAtiva = useMemo(() => isJanelaVendaNaHora(now), [now])
+  const dataEventoOperacional = useMemo(() => getDataEventoOperacional(now), [now])
+
+  const isReadOnlyHistorico = useMemo(() => {
+    if (vendaNaHoraAtiva && dataEvento === dataEventoOperacional) return false
+    return isPastDateISO(dataEvento)
+  }, [dataEvento, vendaNaHoraAtiva, dataEventoOperacional])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(new Date())
+    }, 30_000)
+
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    if (vendaNaHoraAtiva) {
+      setDataEvento(dataEventoOperacional)
+    }
+  }, [vendaNaHoraAtiva, dataEventoOperacional])
+
+  useEffect(() => {
+    if (vendaNaHoraAtiva) {
+      setTipoReserva('NA_HORA')
+    }
+  }, [vendaNaHoraAtiva])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -296,8 +347,9 @@ export default function Home() {
   }, [selecionadoId])
 
   const isCamarote = selecionado?.tipo === 'CAMAROTE'
-  const modeloPrecoObrigatorio = tipoReserva === 'VENDA'
-  const valorSinalObrigatorio = tipoReserva === 'VENDA'
+  const tipoFinanceiro = tipoReserva === 'VENDA' || tipoReserva === 'NA_HORA'
+  const modeloPrecoObrigatorio = tipoFinanceiro
+  const valorSinalObrigatorio = tipoFinanceiro
 
   useEffect(() => {
     let active = true
@@ -360,18 +412,18 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    if (tipoReserva !== 'VENDA') {
+    if (!tipoFinanceiro) {
       setModeloPreco('')
       setValorEspaco('')
       setValorSinal('')
     }
-  }, [tipoReserva])
+  }, [tipoFinanceiro])
 
   useEffect(() => {
-    if (tipoReserva !== 'VENDA') return
+    if (!tipoFinanceiro) return
     const sugerido = parseValorBaseModeloPreco(modeloPreco)
     setValorEspaco(sugerido)
-  }, [modeloPreco, tipoReserva])
+  }, [modeloPreco, tipoFinanceiro])
 
   async function carregarReservasDoDia(dateISO: string) {
     setLoadingReservas(true)
@@ -442,6 +494,11 @@ export default function Home() {
     [reservasAtivasDia]
   )
 
+  const aprovadoNaHoraCount = useMemo(
+    () => reservasAtivasDia.filter((r) => normStatus(r.status) === 'aprovado_na_hora').length,
+    [reservasAtivasDia]
+  )
+
   const aprovadoCortesiaCount = useMemo(
     () => reservasAtivasDia.filter((r) => normStatus(r.status) === 'aprovado_cortesia').length,
     [reservasAtivasDia]
@@ -475,7 +532,8 @@ export default function Home() {
     if (!r) return 'LIVRE'
     if (st === 'pendente') return 'AGUARDANDO CONFIRMAÇÃO'
     if (st === 'aprovado_cortesia') return 'CORTESIA / ANIVERSÁRIO'
-    if (st === 'aprovado_venda') return 'VENDA CONFIRMADA'
+    if (st === 'aprovado_venda') return 'VENDA ANTECIPADA'
+    if (st === 'aprovado_na_hora') return 'VENDA NA HORA'
     return (r?.status ?? 'RESERVADO').toString().toUpperCase()
   }, [hoveredId, reservaPorEspaco])
 
@@ -491,13 +549,15 @@ export default function Home() {
     if (!r) return 'LIVRE'
     if (st === 'pendente') return 'AGUARDANDO CONFIRMAÇÃO'
     if (st === 'aprovado_cortesia') return 'CORTESIA / ANIVERSÁRIO'
-    if (st === 'aprovado_venda') return 'VENDA CONFIRMADA'
+    if (st === 'aprovado_venda') return 'VENDA ANTECIPADA'
+    if (st === 'aprovado_na_hora') return 'VENDA NA HORA'
     return (r?.status ?? 'RESERVADO').toString().toUpperCase()
   }
 
   function tipoLabel(r: ReservaRow) {
-    const t = (r?.tipo ?? '').toString().toLowerCase()
-    if (t === 'venda') return 'Venda'
+    const t = normTipo(r?.tipo)
+    if (t === 'venda') return 'Venda antecipada'
+    if (t === 'na_hora') return 'Venda na hora'
     if (t === 'cortesia') return 'Cortesia'
     if (t === 'aniversario') return 'Aniversário'
     return (r?.tipo ?? '').toString()
@@ -535,6 +595,10 @@ export default function Home() {
       fill = '#22c55e'
       stroke = '#166534'
       fillOpacity = '0.88'
+    } else if (st === 'aprovado_na_hora') {
+      fill = '#93c5fd'
+      stroke = '#3b82f6'
+      fillOpacity = '0.92'
     }
 
     if (highlighted) {
@@ -780,8 +844,15 @@ export default function Home() {
 
     if (st === 'aprovado_venda') {
       return {
-        label: 'Aprovado (Venda)',
+        label: 'Aprovado (Venda antecipada)',
         cls: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      }
+    }
+
+    if (st === 'aprovado_na_hora') {
+      return {
+        label: 'Aprovado (Venda na hora)',
+        cls: 'bg-sky-50 text-sky-700 border-sky-200',
       }
     }
 
@@ -815,7 +886,7 @@ export default function Home() {
     setSelecionadoId(espacoId.toLowerCase())
     setNomeCompleto('')
     setTelefone('')
-    setTipoReserva('ANIVERSARIO')
+    setTipoReserva(vendaNaHoraAtiva ? 'NA_HORA' : 'ANIVERSARIO')
     setModeloPreco('')
     setValorEspaco('')
     setValorSinal('')
@@ -920,6 +991,10 @@ export default function Home() {
       return
     }
 
+    const tipoFinal: ReservaTipo = vendaNaHoraAtiva ? 'NA_HORA' : tipoReserva
+    const dataEventoFinal = vendaNaHoraAtiva ? dataEventoOperacional : dataEvento
+    const tipoFinanceiroFinal = tipoFinal === 'VENDA' || tipoFinal === 'NA_HORA'
+
     if (!nomeCompleto.trim()) {
       alert('Preencha o nome completo.')
       return
@@ -931,37 +1006,37 @@ export default function Home() {
       return
     }
 
-    if (modeloPrecoObrigatorio && !modeloPreco) {
+    if (tipoFinanceiroFinal && !modeloPreco) {
       alert('Selecione o modelo de preço.')
       return
     }
 
     const valorEspacoNumber =
-      tipoReserva === 'VENDA'
+      tipoFinanceiroFinal
         ? Number(String(valorEspaco).replace(',', '.'))
         : null
 
-    if (!valorEspaco.trim() && tipoReserva === 'VENDA') {
+    if (!valorEspaco.trim() && tipoFinanceiroFinal) {
       alert('Não foi possível identificar o valor da mesa/camarote a partir do modelo selecionado.')
       return
     }
 
-    if (!Number.isFinite(valorEspacoNumber) && tipoReserva === 'VENDA') {
+    if (!Number.isFinite(valorEspacoNumber) && tipoFinanceiroFinal) {
       alert('Valor automático da mesa/camarote inválido.')
       return
     }
 
-    if (valorEspacoNumber !== null && valorEspacoNumber <= 0 && tipoReserva === 'VENDA') {
+    if (valorEspacoNumber !== null && valorEspacoNumber <= 0 && tipoFinanceiroFinal) {
       alert('Valor automático da mesa/camarote inválido.')
       return
     }
 
     const valorSinalNumber =
-      tipoReserva === 'VENDA'
+      tipoFinanceiroFinal
         ? Number(String(valorSinal).replace(',', '.'))
         : null
 
-    if (valorSinalObrigatorio) {
+    if (tipoFinanceiroFinal) {
       if (!valorSinal.trim()) {
         alert('Preencha o valor do sinal adiantado.')
         return
@@ -974,7 +1049,7 @@ export default function Home() {
     }
 
     if (
-      tipoReserva === 'VENDA' &&
+      tipoFinanceiroFinal &&
       valorEspacoNumber !== null &&
       valorSinalNumber !== null &&
       valorSinalNumber > valorEspacoNumber
@@ -1017,7 +1092,7 @@ export default function Home() {
         const ext = getExt(anexoObs.name)
         const uuid = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`
         const fileName = safeFileName(`${uuid}.${ext}`)
-        const path = `observacoes/${dataEvento}/${selecionado.id}/${fileName}`
+        const path = `observacoes/${dataEventoFinal}/${selecionado.id}/${fileName}`
 
         const { data: upData, error: upErr } = await supabase.storage
           .from('comprovantes')
@@ -1038,14 +1113,14 @@ export default function Home() {
 
       const payload = {
         user_id: userId,
-        data_evento: dataEvento,
+        data_evento: dataEventoFinal,
         espaco_id: selecionado.id.toLowerCase().trim(),
         nome: nomeCompleto.trim(),
         telefone: tel,
-        tipo: tipoReserva.toLowerCase(),
-        modelo_preco: tipoReserva === 'VENDA' ? modeloPreco : null,
-        valor_espaco: tipoReserva === 'VENDA' ? valorEspacoNumber : null,
-        valor_sinal: tipoReserva === 'VENDA' ? valorSinalNumber : null,
+        tipo: tipoFinal.toLowerCase(),
+        modelo_preco: tipoFinanceiroFinal ? modeloPreco : null,
+        valor_espaco: tipoFinanceiroFinal ? valorEspacoNumber : null,
+        valor_sinal: tipoFinanceiroFinal ? valorSinalNumber : null,
         status: 'pendente',
         observacao: observacao.trim(),
         comprovante_url: uploadedPath,
@@ -1090,7 +1165,7 @@ export default function Home() {
       }
 
       closeReservaModal()
-      await carregarReservasDoDia(dataEvento)
+      await carregarReservasDoDia(dataEventoFinal)
       alert('Solicitação enviada! Status: aguardando confirmação (amarelo).')
     } finally {
       setSaving(false)
@@ -1114,7 +1189,17 @@ export default function Home() {
             <div>
               <h1 className="text-2xl font-semibold text-white">Reservas — Looby</h1>
               <p className={`mt-2 ${SOFT_TEXT}`}>
-                Escolha a <b className="text-white">data do evento</b> e depois selecione o espaço no mapa.
+                {vendaNaHoraAtiva ? (
+                  <>
+                    Janela operacional ativa. As solicitações feitas agora entram como{' '}
+                    <b className="text-white">venda na hora</b> vinculada ao evento de{' '}
+                    <b className="text-white">{dataEventoOperacional}</b>.
+                  </>
+                ) : (
+                  <>
+                    Escolha a <b className="text-white">data do evento</b> e depois selecione o espaço no mapa.
+                  </>
+                )}
               </p>
             </div>
 
@@ -1140,11 +1225,19 @@ export default function Home() {
             <input
               type="date"
               value={dataEvento}
-              onChange={(e) => setDataEvento(e.target.value)}
-              className={INPUT_CLASS}
+              onChange={(e) => {
+                if (vendaNaHoraAtiva) return
+                setDataEvento(e.target.value)
+              }}
+              disabled={vendaNaHoraAtiva}
+              className={`${INPUT_CLASS} ${vendaNaHoraAtiva ? 'cursor-not-allowed opacity-70' : ''}`}
             />
 
-            {isPastDateISO(dataEvento) ? (
+            {vendaNaHoraAtiva ? (
+              <p className="mt-2 text-xs text-sky-200">
+                ℹ️ Das 23:00 até 07:00, o sistema usa automaticamente a data operacional do evento para reservas na hora.
+              </p>
+            ) : isPastDateISO(dataEvento) ? (
               <p className="mt-2 text-xs text-amber-200">
                 ⚠️ Data passada: você pode visualizar o mapa como histórico, mas não poderá solicitar reservas.
               </p>
@@ -1178,6 +1271,12 @@ export default function Home() {
               <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-red-50/85">
                 {dataEvento}
               </span>
+
+              {vendaNaHoraAtiva ? (
+                <span className="rounded-full border border-sky-300/30 bg-sky-400/15 px-3 py-1 text-xs text-sky-100">
+                  Janela: venda na hora
+                </span>
+              ) : null}
             </div>
 
             <p className="mt-2 text-sm text-red-50/70">
@@ -1242,7 +1341,12 @@ export default function Home() {
 
                   <div className="flex items-center gap-2">
                     <span className="h-3.5 w-3.5 rounded border border-emerald-300 bg-green-500/90" />
-                    <span>Aprovado (Venda)</span>
+                    <span>Aprovado (Venda antecipada)</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="h-3.5 w-3.5 rounded border border-sky-300 bg-sky-300/90" />
+                    <span>Aprovado (Venda na hora)</span>
                   </div>
 
                   <div className="pt-2 text-xs text-red-50/55">Cancelado não pinta.</div>
@@ -1266,8 +1370,13 @@ export default function Home() {
                 </div>
 
                 <div className={`${RED_INNER} flex items-center justify-between px-3 py-2`}>
-                  <span className="text-red-50/88">Aprovadas (Venda)</span>
+                  <span className="text-red-50/88">Aprovadas (Venda antecipada)</span>
                   <b className="text-white">{loadingReservas ? '...' : aprovadoVendaCount}</b>
+                </div>
+
+                <div className={`${RED_INNER} flex items-center justify-between px-3 py-2`}>
+                  <span className="text-red-50/88">Aprovadas (Venda na hora)</span>
+                  <b className="text-white">{loadingReservas ? '...' : aprovadoNaHoraCount}</b>
                 </div>
 
                 <div className={`${RED_INNER} flex items-center justify-between px-3 py-2`}>
@@ -1295,7 +1404,8 @@ export default function Home() {
                     <>
                       Este dia possui <b className="text-white">{totalReservasDia}</b> reserva(s), sendo{' '}
                       <b className="text-white">{pendentesCount}</b> pendente(s),{' '}
-                      <b className="text-white">{aprovadoVendaCount}</b> aprovada(s) por venda e{' '}
+                      <b className="text-white">{aprovadoVendaCount}</b> aprovada(s) por venda antecipada,{' '}
+                      <b className="text-white">{aprovadoNaHoraCount}</b> aprovada(s) por venda na hora e{' '}
                       <b className="text-white">{aprovadoCortesiaCount}</b> aprovada(s) por cortesia/aniversário.
                       <br />
                       Entre elas, há <b className="text-white">{mesasReservadasCount}</b> mesa(s) e{' '}
@@ -1468,7 +1578,7 @@ export default function Home() {
                         </span>
                       </div>
 
-                      {detailsReserva.tipo?.toLowerCase() === 'venda' ? (
+                      {(detailsReserva.tipo?.toLowerCase() === 'venda' || detailsReserva.tipo?.toLowerCase() === 'na_hora') ? (
                         <>
                           <div className="flex justify-between gap-3">
                             <span className="text-red-50/60">Valor da mesa/camarote</span>
@@ -1519,7 +1629,8 @@ export default function Home() {
                     <div>
                       <h2 className="text-xl font-semibold text-white">Solicitar reserva</h2>
                       <p className="mt-1 text-sm text-red-50/75">
-                        Data: <b className="text-white">{dataEvento}</b> • Espaço:{' '}
+                        Data:{' '}
+                        <b className="text-white">{vendaNaHoraAtiva ? dataEventoOperacional : dataEvento}</b> • Espaço:{' '}
                         <b className="text-white">
                           {selecionado.nome} ({selecionado.tipo})
                         </b>
@@ -1530,6 +1641,13 @@ export default function Home() {
                       Fechar
                     </button>
                   </div>
+
+                  {vendaNaHoraAtiva ? (
+                    <div className="mb-4 rounded-xl border border-sky-300/25 bg-sky-400/10 p-3 text-sm text-sky-100">
+                      Esta solicitação será registrada como <b>venda na hora</b> para o evento de{' '}
+                      <b>{dataEventoOperacional}</b>.
+                    </div>
+                  ) : null}
 
                   <form className="space-y-4" onSubmit={submitReserva}>
                     <div>
@@ -1554,12 +1672,22 @@ export default function Home() {
                       <label className={LABEL_CLASS}>Tipo</label>
                       <select
                         value={tipoReserva}
-                        onChange={(e) => setTipoReserva(e.target.value as ReservaTipo)}
-                        className={INPUT_CLASS}
+                        onChange={(e) => {
+                          if (vendaNaHoraAtiva) return
+                          setTipoReserva(e.target.value as ReservaTipo)
+                        }}
+                        disabled={vendaNaHoraAtiva}
+                        className={`${INPUT_CLASS} ${vendaNaHoraAtiva ? 'cursor-not-allowed opacity-70' : ''}`}
                       >
-                        <option value="ANIVERSARIO">Aniversário</option>
-                        <option value="CORTESIA">Cortesia</option>
-                        <option value="VENDA">Venda</option>
+                        {vendaNaHoraAtiva ? (
+                          <option value="NA_HORA">Venda na hora</option>
+                        ) : (
+                          <>
+                            <option value="ANIVERSARIO">Aniversário</option>
+                            <option value="CORTESIA">Cortesia</option>
+                            <option value="VENDA">Venda antecipada</option>
+                          </>
+                        )}
                       </select>
                     </div>
 

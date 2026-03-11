@@ -4,8 +4,15 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 
-type Status = 'pendente' | 'aprovado_cortesia' | 'aprovado_venda' | 'cancelado' | string
-type Tipo = 'aniversario' | 'cortesia' | 'venda' | string
+type Status =
+  | 'pendente'
+  | 'aprovado_cortesia'
+  | 'aprovado_venda'
+  | 'aprovado_na_hora'
+  | 'cancelado'
+  | string
+
+type Tipo = 'aniversario' | 'cortesia' | 'venda' | 'na_hora' | string
 
 type ReservaRow = {
   id: any
@@ -65,10 +72,20 @@ function isPendente(status: Status) {
 }
 function isAprovado(status: Status) {
   const s = normLower(status)
-  return s === 'aprovado_venda' || s === 'aprovado_cortesia'
+  return s === 'aprovado_venda' || s === 'aprovado_cortesia' || s === 'aprovado_na_hora'
 }
 function isCancelado(status: Status) {
   return normLower(status) === 'cancelado'
+}
+function isAprovadoVenda(status: Status) {
+  return normLower(status) === 'aprovado_venda'
+}
+function isAprovadoNaHora(status: Status) {
+  return normLower(status) === 'aprovado_na_hora'
+}
+function isTipoFinanceiro(tipo: Tipo) {
+  const t = normLower(tipo)
+  return t === 'venda' || t === 'na_hora'
 }
 
 function isCamarote(espacoId: string) {
@@ -133,14 +150,17 @@ function displayEspacoCompleto(espacoId: string) {
   return `${isMesa(espacoId) ? 'Mesa' : 'Camarote'} ${displayLocal(espacoId)}`
 }
 
-function destinoStatusPorTipo(tipo: string): 'aprovado_venda' | 'aprovado_cortesia' {
+function destinoStatusPorTipo(tipo: string): 'aprovado_venda' | 'aprovado_cortesia' | 'aprovado_na_hora' {
   const t = normLower(tipo)
-  return t === 'venda' ? 'aprovado_venda' : 'aprovado_cortesia'
+  if (t === 'venda') return 'aprovado_venda'
+  if (t === 'na_hora') return 'aprovado_na_hora'
+  return 'aprovado_cortesia'
 }
 
 function labelTipo(tipo: string) {
   const t = normLower(tipo)
-  if (t === 'venda') return 'Venda'
+  if (t === 'venda') return 'Venda antecipada'
+  if (t === 'na_hora') return 'Venda na hora'
   if (t === 'cortesia') return 'Cortesia'
   if (t === 'aniversario') return 'Aniversário'
   return String(tipo ?? '')
@@ -149,7 +169,8 @@ function labelTipo(tipo: string) {
 function statusBadgeText(status: Status) {
   const s = normLower(status)
   if (s === 'pendente') return 'PENDENTE'
-  if (s === 'aprovado_venda') return 'VENDA APROVADA'
+  if (s === 'aprovado_venda') return 'VENDA ANTECIPADA APROVADA'
+  if (s === 'aprovado_na_hora') return 'VENDA NA HORA APROVADA'
   if (s === 'aprovado_cortesia') return 'CORTESIA APROVADA'
   if (s === 'cancelado') return 'CANCELADA'
   return String(status ?? '').toUpperCase()
@@ -159,6 +180,7 @@ function statusTone(status: Status): 'neutral' | 'yellow' | 'green' | 'orange' |
   const s = normLower(status)
   if (s === 'pendente') return 'yellow'
   if (s === 'aprovado_venda') return 'green'
+  if (s === 'aprovado_na_hora') return 'blue'
   if (s === 'aprovado_cortesia') return 'orange'
   if (s === 'cancelado') return 'red'
   return 'neutral'
@@ -202,7 +224,9 @@ function traduzAcao(acao: string) {
     case 'criou_reserva':
       return 'Criou a reserva'
     case 'aprovou_venda':
-      return 'Aprovou como venda'
+      return 'Aprovou como venda antecipada'
+    case 'aprovou_na_hora':
+      return 'Aprovou como venda na hora'
     case 'aprovou_cortesia':
       return 'Aprovou como cortesia'
     case 'cancelou_reserva':
@@ -224,6 +248,8 @@ function getCorAcao(acao: string) {
       return 'bg-sky-500'
     case 'aprovou_venda':
       return 'bg-emerald-500'
+    case 'aprovou_na_hora':
+      return 'bg-blue-500'
     case 'aprovou_cortesia':
       return 'bg-amber-500'
     case 'cancelou_reserva':
@@ -307,14 +333,17 @@ function whatsappMessage(r: ReservaRow) {
     return `Olá, ${r.nome}! Recebemos sua solicitação de reserva (${espacoLabel}) para o dia ${data} no Looby.\n\nAssim que aprovarmos, te avisamos por aqui.`
   }
   if (status === 'aprovado_venda') {
-    return `Olá, ${r.nome}! Sua reserva foi APROVADA (${espacoLabel}) para o dia ${data} no Looby. ✅\n\nQualquer dúvida, me chama por aqui.`
+    return `Olá, ${r.nome}! Sua reserva de VENDA ANTECIPADA foi APROVADA (${espacoLabel}) para o dia ${data} no Looby. ✅\n\nQualquer dúvida, me chama por aqui.`
+  }
+  if (status === 'aprovado_na_hora') {
+    return `Olá, ${r.nome}! Sua reserva de VENDA NA HORA foi APROVADA (${espacoLabel}) para o dia ${data} no Looby. ✅\n\nQualquer dúvida, me chama por aqui.`
   }
   if (status === 'aprovado_cortesia') {
     const label = tipo === 'aniversario' ? 'ANIVERSÁRIO' : 'CORTESIA'
     return `Olá, ${r.nome}! Sua reserva de ${label} foi APROVADA (${espacoLabel}) para o dia ${data} no Looby. ✅\n\nNos vemos lá!`
   }
   if (status === 'cancelado') {
-    return `Olá, ${r.nome}. Sua reserva (${espacoLabel}) para o dia ${data} foi CANCELADA. ❌\n\nSe quiser, posso te ajudar a solicitar outra data/espaço.`
+    return `Olá, ${r.nome}. Sua reserva (${espacoLabel}) para o dia ${data} foi CANCELADA. ❌\n\nSe quiser, posso te ajudar a solicitar outra data/espaço.`
   }
   return `Olá, ${r.nome}! Sobre sua reserva (${espacoLabel}) do dia ${data} no Looby, me chama por aqui para atualizarmos o status.`
 }
@@ -419,6 +448,7 @@ function ReservationCard({
   const temValorSinal = Number(r.valor_sinal ?? 0) > 0
   const temValorEspaco = Number(r.valor_espaco ?? 0) > 0
   const faltaReceber = valorFaltaReceber(r)
+  const mostrarFinanceiro = isTipoFinanceiro(r.tipo)
 
   return (
     <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
@@ -441,7 +471,9 @@ function ReservationCard({
             {modeloPrecoText ? <Pill tone="blue">Modelo: {modeloPrecoText}</Pill> : null}
             {temValorEspaco ? <Pill tone="blue">Valor: {formatCurrencyBR(r.valor_espaco)}</Pill> : null}
             {temValorSinal ? <Pill tone="green">Sinal: {formatCurrencyBR(r.valor_sinal)}</Pill> : null}
-            {normLower(r.status) === 'aprovado_venda' ? <Pill tone="yellow">Falta: {formatCurrencyBR(faltaReceber)}</Pill> : null}
+            {mostrarFinanceiro && (isAprovadoVenda(r.status) || isAprovadoNaHora(r.status)) ? (
+              <Pill tone="yellow">Falta: {formatCurrencyBR(faltaReceber)}</Pill>
+            ) : null}
             <Pill tone="blue">Resp: {solicitanteNome ?? (r.user_id ? r.user_id.slice(0, 8) : '—')}</Pill>
             {hasObsText ? <Pill>Observação</Pill> : null}
             {hasFile ? <Pill>Anexo</Pill> : null}
@@ -464,7 +496,7 @@ function ReservationCard({
                 </div>
               ) : null}
 
-              {normLower(r.status) === 'aprovado_venda' ? (
+              {mostrarFinanceiro && (isAprovadoVenda(r.status) || isAprovadoNaHora(r.status)) ? (
                 <div className="rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2">
                   <div className="text-xs text-yellow-700">Falta receber na hora</div>
                   <div className="mt-1 text-sm font-semibold text-yellow-900">{formatCurrencyBR(faltaReceber)}</div>
@@ -546,10 +578,20 @@ function ReservationCard({
               onClick={onAprovar}
               disabled={disabled}
               className={`rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-55 ${
-                normLower(r.tipo) === 'venda' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-orange-500 hover:bg-orange-400'
+                normLower(r.tipo) === 'venda'
+                  ? 'bg-emerald-600 hover:bg-emerald-500'
+                  : normLower(r.tipo) === 'na_hora'
+                    ? 'bg-blue-600 hover:bg-blue-500'
+                    : 'bg-orange-500 hover:bg-orange-400'
               }`}
             >
-              {disabled ? 'Salvando…' : normLower(r.tipo) === 'venda' ? 'Aprovar venda' : 'Aprovar cortesia'}
+              {disabled
+                ? 'Salvando…'
+                : normLower(r.tipo) === 'venda'
+                  ? 'Aprovar venda antecipada'
+                  : normLower(r.tipo) === 'na_hora'
+                    ? 'Aprovar venda na hora'
+                    : 'Aprovar cortesia'}
             </button>
           ) : null}
         </div>
@@ -585,7 +627,7 @@ export default function AdminPage() {
 
   const [dataInicial, setDataInicial] = useState<string>(todayISO())
   const [dataFinal, setDataFinal] = useState<string>(todayISO())
-  const [tipoFiltro, setTipoFiltro] = useState<'todas' | 'venda' | 'cortesia' | 'aniversario'>('todas')
+  const [tipoFiltro, setTipoFiltro] = useState<'todas' | 'venda' | 'na_hora' | 'cortesia' | 'aniversario'>('todas')
   const [userFiltro, setUserFiltro] = useState<'todos' | string>('todos')
   const [espacoTipoFiltro, setEspacoTipoFiltro] = useState<'todos' | 'mesa' | 'camarote'>('todos')
   const [busca, setBusca] = useState('')
@@ -891,7 +933,7 @@ export default function AdminPage() {
     let valorEspaco: number | null = null
     let valorSinal: number | null = null
 
-    if (tipo === 'venda') {
+    if (tipo === 'venda' || tipo === 'na_hora') {
       const espacoNum = editValorEspaco.trim() === '' ? NaN : Number(editValorEspaco.replace(',', '.'))
       const sinalNum = editValorSinal.trim() === '' ? 0 : Number(editValorSinal.replace(',', '.'))
 
@@ -913,14 +955,22 @@ export default function AdminPage() {
       valorEspaco = espacoNum
       valorSinal = sinalNum
 
-      if (status !== 'pendente' && status !== 'aprovado_venda' && status !== 'cancelado') {
-        status = 'aprovado_venda'
+      if (tipo === 'venda') {
+        if (status !== 'pendente' && status !== 'aprovado_venda' && status !== 'cancelado') {
+          status = 'aprovado_venda'
+        }
+      }
+
+      if (tipo === 'na_hora') {
+        if (status !== 'pendente' && status !== 'aprovado_na_hora' && status !== 'cancelado') {
+          status = 'aprovado_na_hora'
+        }
       }
     } else {
       valorEspaco = null
       valorSinal = null
 
-      if (status === 'aprovado_venda') {
+      if (status === 'aprovado_venda' || status === 'aprovado_na_hora') {
         status = 'aprovado_cortesia'
       }
       if (status !== 'pendente' && status !== 'aprovado_cortesia' && status !== 'cancelado') {
@@ -938,9 +988,9 @@ export default function AdminPage() {
         telefone,
         tipo,
         status,
-        modelo_preco: tipo === 'venda' ? modeloPreco : null,
-        valor_espaco: tipo === 'venda' ? valorEspaco : null,
-        valor_sinal: tipo === 'venda' ? valorSinal : null,
+        modelo_preco: isTipoFinanceiro(tipo) ? modeloPreco : null,
+        valor_espaco: isTipoFinanceiro(tipo) ? valorEspaco : null,
+        valor_sinal: isTipoFinanceiro(tipo) ? valorSinal : null,
         observacao,
       }
 
@@ -967,8 +1017,8 @@ export default function AdminPage() {
   async function adicionarAoSinalReserva() {
     if (!reservaSelecionada) return
 
-    if (normLower(reservaSelecionada.tipo) !== 'venda') {
-      alert('Só é possível adicionar sinal em reservas de venda.')
+    if (!isTipoFinanceiro(reservaSelecionada.tipo)) {
+      alert('Só é possível adicionar sinal em reservas financeiras.')
       return
     }
 
@@ -1044,16 +1094,19 @@ export default function AdminPage() {
     const canceladas = reservas.filter((r) => isCancelado(r.status))
 
     const vendasAprovadas = aprovadas.filter((r) => normLower(r.status) === 'aprovado_venda')
+    const vendasNaHoraAprovadas = aprovadas.filter((r) => normLower(r.status) === 'aprovado_na_hora')
     const cortesiasAprovadas = aprovadas.filter((r) => normLower(r.status) === 'aprovado_cortesia')
 
     const reservasVenda = reservas.filter((r) => normLower(r.tipo) === 'venda')
-    const reservasVendaAprovadas = reservas.filter((r) => normLower(r.status) === 'aprovado_venda')
+    const reservasNaHora = reservas.filter((r) => normLower(r.tipo) === 'na_hora')
 
-    const totalSinal = reservasVendaAprovadas.reduce((acc, r) => acc + Number(r.valor_sinal ?? 0), 0)
+    const reservasFinanceirasAprovadas = reservas.filter(
+      (r) => normLower(r.status) === 'aprovado_venda' || normLower(r.status) === 'aprovado_na_hora'
+    )
 
-    const totalFaltaReceber = reservasVendaAprovadas.reduce((acc, r) => {
-      return acc + valorFaltaReceber(r)
-    }, 0)
+    const totalSinal = reservasFinanceirasAprovadas.reduce((acc, r) => acc + Number(r.valor_sinal ?? 0), 0)
+
+    const totalFaltaReceber = reservasFinanceirasAprovadas.reduce((acc, r) => acc + valorFaltaReceber(r), 0)
 
     const porEventoMap = new Map<
       string,
@@ -1061,17 +1114,17 @@ export default function AdminPage() {
         data_evento: string
         totalSinais: number
         totalFaltaReceber: number
-        reservasVenda: number
+        reservasFinanceiras: number
       }
     >()
 
-    reservasVendaAprovadas.forEach((r) => {
+    reservasFinanceirasAprovadas.forEach((r) => {
       const key = r.data_evento
       const atual = porEventoMap.get(key) ?? {
         data_evento: key,
         totalSinais: 0,
         totalFaltaReceber: 0,
-        reservasVenda: 0,
+        reservasFinanceiras: 0,
       }
 
       const sinal = Number(r.valor_sinal ?? 0)
@@ -1079,7 +1132,7 @@ export default function AdminPage() {
 
       atual.totalSinais += sinal
       atual.totalFaltaReceber += falta
-      atual.reservasVenda += 1
+      atual.reservasFinanceiras += 1
 
       porEventoMap.set(key, atual)
     })
@@ -1095,7 +1148,7 @@ export default function AdminPage() {
     const pendentesFilaMesas = pendentesFila.filter((r) => r.espaco_id && isMesa(r.espaco_id))
     const pendentesFilaCamarotes = pendentesFila.filter((r) => r.espaco_id && isCamarote(r.espaco_id))
 
-    const cobrancaRecepcao = [...reservasVendaAprovadas].sort((a, b) => {
+    const cobrancaRecepcao = [...reservasFinanceirasAprovadas].sort((a, b) => {
       const dateCmp = String(a.data_evento).localeCompare(String(b.data_evento))
       if (dateCmp !== 0) return dateCmp
 
@@ -1113,12 +1166,14 @@ export default function AdminPage() {
       aprovadas,
       canceladas,
       vendasAprovadas,
+      vendasNaHoraAprovadas,
       cortesiasAprovadas,
       totalSinal,
       totalFaltaReceber,
       financeiroPorEvento,
       reservasVenda,
-      reservasVendaAprovadas,
+      reservasNaHora,
+      reservasFinanceirasAprovadas,
       pendentesFila,
       pendentesFilaMesas,
       pendentesFilaCamarotes,
@@ -1139,6 +1194,22 @@ export default function AdminPage() {
       .sort((a, b) => b.count - a.count)
   }, [reservas, profileNameById])
 
+  const rankingVendasAntecipadas = useMemo(() => {
+    const map = new Map<string, number>()
+    reservas.forEach((r) => {
+      if (!r.user_id) return
+      if (normLower(r.tipo) !== 'venda') return
+      map.set(r.user_id, (map.get(r.user_id) ?? 0) + 1)
+    })
+    return Array.from(map.entries())
+      .map(([uid, count]) => ({
+        uid,
+        count,
+        name: profileNameById.get(uid) ?? uid.slice(0, 8),
+      }))
+      .sort((a, b) => b.count - a.count)
+  }, [reservas, profileNameById])
+
   const listaRelatorio = useMemo(() => {
     if (relatorioStatus === 'todas') return reservas
     if (relatorioStatus === 'pendentes') return reservas.filter((r) => isPendente(r.status))
@@ -1148,13 +1219,14 @@ export default function AdminPage() {
 
   function exportarRelatorioCobranca() {
     if (computed.cobrancaRecepcao.length === 0) {
-      alert('Não há reservas aprovadas de venda para exportar no período selecionado.')
+      alert('Não há reservas aprovadas financeiras para exportar no período selecionado.')
       return
     }
 
     const rows = computed.cobrancaRecepcao.map((r) => [
       formatBRDate(r.data_evento),
       displayEspacoCompleto(r.espaco_id),
+      labelTipo(r.tipo),
       r.nome,
       formatTelefoneRelatorio(r.telefone),
       Number(r.valor_sinal ?? 0).toFixed(2).replace('.', ','),
@@ -1172,6 +1244,7 @@ export default function AdminPage() {
       [
         'Data do evento',
         'Espaço',
+        'Tipo',
         'Nome do cliente',
         'Telefone',
         'Valor sinal antecipado',
@@ -1295,7 +1368,8 @@ export default function AdminPage() {
                 <option value="todas">Todos</option>
                 <option value="aniversario">Aniversário</option>
                 <option value="cortesia">Cortesia</option>
-                <option value="venda">Venda</option>
+                <option value="venda">Venda antecipada</option>
+                <option value="na_hora">Venda na hora</option>
               </select>
             </div>
 
@@ -1380,19 +1454,20 @@ export default function AdminPage() {
             {mainTab === 'relatorios' ? (
               <>
                 <Section title={`Relatórios — ${periodoLabel}`} subtitle="Resumo operacional do período conforme filtros aplicados.">
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-7">
                     <StatCard title="Reservas" value={totalPeriodo} />
                     <StatCard title="Pendentes" value={computed.pendentesPeriodo.length} />
                     <StatCard title="Aprovadas" value={computed.aprovadas.length} />
                     <StatCard title="Canceladas" value={computed.canceladas.length} />
-                    <StatCard title="Vendas" value={computed.vendasAprovadas.length} />
+                    <StatCard title="Vendas antecipadas" value={computed.vendasAprovadas.length} />
+                    <StatCard title="Vendas na hora" value={computed.vendasNaHoraAprovadas.length} />
                     <StatCard title="Cortesias" value={computed.cortesiasAprovadas.length} />
                   </div>
 
-                  <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-neutral-900">Ranking de operadores</h3>
+                        <h3 className="font-semibold text-neutral-900">Ranking total por usuário</h3>
                         <Pill tone="blue">{rankingUsers.length}</Pill>
                       </div>
 
@@ -1401,6 +1476,30 @@ export default function AdminPage() {
                           <EmptyState text="Sem dados no período atual." />
                         ) : (
                           rankingUsers.map((it, idx) => (
+                            <div key={it.uid} className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-3 py-2">
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-semibold text-neutral-900">
+                                  {idx + 1}. {it.name}
+                                </div>
+                              </div>
+                              <Pill tone="green">{it.count}</Pill>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-neutral-900">Vendas antecipadas por usuário</h3>
+                        <Pill tone="blue">{rankingVendasAntecipadas.length}</Pill>
+                      </div>
+
+                      <div className="mt-3 space-y-2">
+                        {rankingVendasAntecipadas.length === 0 ? (
+                          <EmptyState text="Sem vendas antecipadas no período atual." />
+                        ) : (
+                          rankingVendasAntecipadas.map((it, idx) => (
                             <div key={it.uid} className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-3 py-2">
                               <div className="min-w-0">
                                 <div className="truncate text-sm font-semibold text-neutral-900">
@@ -1461,7 +1560,7 @@ export default function AdminPage() {
               <>
                 <Section
                   title={`Financeiro — ${periodoLabel}`}
-                  subtitle="Resumo financeiro das reservas aprovadas de venda no período."
+                  subtitle="Resumo financeiro das reservas aprovadas de venda antecipada e venda na hora."
                   right={
                     <button
                       onClick={exportarRelatorioCobranca}
@@ -1471,8 +1570,10 @@ export default function AdminPage() {
                     </button>
                   }
                 >
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <StatCard title="Reservas de venda aprovadas" value={computed.reservasVendaAprovadas.length} />
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+                    <StatCard title="Vendas antecipadas aprovadas" value={computed.vendasAprovadas.length} />
+                    <StatCard title="Vendas na hora aprovadas" value={computed.vendasNaHoraAprovadas.length} />
+                    <StatCard title="Reservas financeiras aprovadas" value={computed.reservasFinanceirasAprovadas.length} />
                     <StatCard title="Total de sinais" value={formatCurrencyBR(computed.totalSinal)} />
                     <StatCard title="Falta receber na hora" value={formatCurrencyBR(computed.totalFaltaReceber)} />
                   </div>
@@ -1488,6 +1589,7 @@ export default function AdminPage() {
                         <tr className="text-left text-neutral-600">
                           <th className="px-4 py-3 font-semibold">Data</th>
                           <th className="px-4 py-3 font-semibold">Espaço</th>
+                          <th className="px-4 py-3 font-semibold">Tipo</th>
                           <th className="px-4 py-3 font-semibold">Nome</th>
                           <th className="px-4 py-3 font-semibold">Telefone</th>
                           <th className="px-4 py-3 font-semibold">Sinal</th>
@@ -1498,8 +1600,8 @@ export default function AdminPage() {
                       <tbody>
                         {computed.cobrancaRecepcao.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="px-4 py-6 text-center text-neutral-500">
-                              Nenhuma reserva aprovada de venda no período atual.
+                            <td colSpan={8} className="px-4 py-6 text-center text-neutral-500">
+                              Nenhuma reserva financeira aprovada no período atual.
                             </td>
                           </tr>
                         ) : (
@@ -1507,6 +1609,7 @@ export default function AdminPage() {
                             <tr key={String(r.id)} className="border-t border-neutral-200">
                               <td className="px-4 py-3">{formatBRDate(r.data_evento)}</td>
                               <td className="px-4 py-3 font-medium text-neutral-900">{displayEspacoCompleto(r.espaco_id)}</td>
+                              <td className="px-4 py-3">{labelTipo(r.tipo)}</td>
                               <td className="px-4 py-3">{r.nome}</td>
                               <td className="px-4 py-3">{formatTelefoneRelatorio(r.telefone)}</td>
                               <td className="px-4 py-3 text-emerald-700">{formatCurrencyBR(r.valor_sinal)}</td>
@@ -1522,7 +1625,7 @@ export default function AdminPage() {
 
                 <Section
                   title="Financeiro por evento/data"
-                  subtitle="Mostra apenas o total de sinais e o total que falta receber no evento."
+                  subtitle="Mostra o total de sinais e o total que falta receber no evento."
                 >
                   <div className="space-y-3">
                     {computed.financeiroPorEvento.length === 0 ? (
@@ -1533,7 +1636,7 @@ export default function AdminPage() {
                           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                             <div>
                               <div className="text-base font-semibold text-neutral-900">{formatBRDate(item.data_evento)}</div>
-                              <div className="mt-1 text-sm text-neutral-500">{item.reservasVenda} reserva(s) de venda aprovada</div>
+                              <div className="mt-1 text-sm text-neutral-500">{item.reservasFinanceiras} reserva(s) financeira(s) aprovada(s)</div>
                             </div>
 
                             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -1653,7 +1756,7 @@ export default function AdminPage() {
                     <div>
                       <div className="text-neutral-500">Falta receber</div>
                       <div className="mt-1 rounded-xl border border-yellow-200 bg-yellow-50 p-3 font-semibold text-yellow-900">
-                        {normLower(reservaSelecionada.tipo) === 'venda' ? formatCurrencyBR(valorFaltaReceber(reservaSelecionada)) : '—'}
+                        {isTipoFinanceiro(reservaSelecionada.tipo) ? formatCurrencyBR(valorFaltaReceber(reservaSelecionada)) : '—'}
                       </div>
                     </div>
 
@@ -1694,7 +1797,8 @@ export default function AdminPage() {
                         >
                           <option value="aniversario">Aniversário</option>
                           <option value="cortesia">Cortesia</option>
-                          <option value="venda">Venda</option>
+                          <option value="venda">Venda antecipada</option>
+                          <option value="na_hora">Venda na hora</option>
                         </select>
                       </div>
 
@@ -1706,14 +1810,15 @@ export default function AdminPage() {
                           className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
                         >
                           <option value="pendente">Pendente</option>
-                          <option value="aprovado_venda">Aprovado venda</option>
+                          <option value="aprovado_venda">Aprovado venda antecipada</option>
+                          <option value="aprovado_na_hora">Aprovado venda na hora</option>
                           <option value="aprovado_cortesia">Aprovado cortesia</option>
                           <option value="cancelado">Cancelado</option>
                         </select>
                       </div>
                     </div>
 
-                    {normLower(editTipo) === 'venda' ? (
+                    {isTipoFinanceiro(editTipo) ? (
                       <>
                         <div>
                           <label className="text-neutral-500">Modelo de preço</label>
@@ -1811,11 +1916,11 @@ export default function AdminPage() {
                   <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-3">
                     <div className="text-xs text-yellow-700">Falta receber</div>
                     <div className="mt-1 font-semibold text-yellow-900">
-                      {normLower(reservaSelecionada.tipo) === 'venda' ? formatCurrencyBR(valorFaltaReceber(reservaSelecionada)) : '—'}
+                      {isTipoFinanceiro(reservaSelecionada.tipo) ? formatCurrencyBR(valorFaltaReceber(reservaSelecionada)) : '—'}
                     </div>
                   </div>
 
-                  {normLower(reservaSelecionada.tipo) === 'venda' ? (
+                  {isTipoFinanceiro(reservaSelecionada.tipo) ? (
                     <>
                       <div>
                         <label className="text-neutral-500">Adicionar valor ao sinal</label>
@@ -1840,7 +1945,7 @@ export default function AdminPage() {
                     </>
                   ) : (
                     <div className="rounded-xl border border-neutral-200 bg-white p-3 text-sm text-neutral-500">
-                      O complemento de sinal só fica disponível para reservas do tipo venda.
+                      O complemento de sinal só fica disponível para reservas financeiras.
                     </div>
                   )}
                 </div>
@@ -1910,14 +2015,18 @@ export default function AdminPage() {
                   className={`rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-55 ${
                     normLower(reservaSelecionada.tipo) === 'venda'
                       ? 'bg-emerald-600 hover:bg-emerald-500'
-                      : 'bg-orange-500 hover:bg-orange-400'
+                      : normLower(reservaSelecionada.tipo) === 'na_hora'
+                        ? 'bg-blue-600 hover:bg-blue-500'
+                        : 'bg-orange-500 hover:bg-orange-400'
                   }`}
                 >
                   {updatingId === String(reservaSelecionada.id)
                     ? 'Salvando…'
                     : normLower(reservaSelecionada.tipo) === 'venda'
-                      ? 'Aprovar venda'
-                      : 'Aprovar cortesia'}
+                      ? 'Aprovar venda antecipada'
+                      : normLower(reservaSelecionada.tipo) === 'na_hora'
+                        ? 'Aprovar venda na hora'
+                        : 'Aprovar cortesia'}
                 </button>
               ) : null}
 
