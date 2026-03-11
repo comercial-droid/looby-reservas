@@ -129,6 +129,10 @@ function displayLocal(espacoId: string) {
   return id
 }
 
+function displayEspacoCompleto(espacoId: string) {
+  return `${isMesa(espacoId) ? 'Mesa' : 'Camarote'} ${displayLocal(espacoId)}`
+}
+
 function destinoStatusPorTipo(tipo: string): 'aprovado_venda' | 'aprovado_cortesia' {
   const t = normLower(tipo)
   return t === 'venda' ? 'aprovado_venda' : 'aprovado_cortesia'
@@ -241,6 +245,43 @@ function formatPeriodoLabel(dataInicial: string, dataFinal: string) {
   if (dataInicial) return `A partir de ${formatBRDate(dataInicial)}`
   if (dataFinal) return `Até ${formatBRDate(dataFinal)}`
   return 'Período completo'
+}
+
+function valorFaltaReceber(r: ReservaRow) {
+  const valorBase = Number(r.valor_espaco ?? 0)
+  const sinal = Number(r.valor_sinal ?? 0)
+  return Math.max(valorBase - sinal, 0)
+}
+
+function formatTelefoneRelatorio(tel: string) {
+  const d = onlyDigits(tel)
+  if (!d) return '****'
+  return `${d.slice(0, 4)}****`
+}
+
+function csvEscape(value: any) {
+  const s = String(value ?? '')
+  if (/[",;\n]/.test(s)) {
+    return `"${s.replace(/"/g, '""')}"`
+  }
+  return s
+}
+
+function downloadCsv(filename: string, headers: string[], rows: (string | number)[][]) {
+  const csvContent = [
+    headers.map(csvEscape).join(';'),
+    ...rows.map((row) => row.map(csvEscape).join(';')),
+  ].join('\n')
+
+  const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
 
 /** WhatsApp */
@@ -377,6 +418,7 @@ function ReservationCard({
   const dataCurta = formatShortDate(r.data_evento)
   const temValorSinal = Number(r.valor_sinal ?? 0) > 0
   const temValorEspaco = Number(r.valor_espaco ?? 0) > 0
+  const faltaReceber = valorFaltaReceber(r)
 
   return (
     <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
@@ -399,6 +441,7 @@ function ReservationCard({
             {modeloPrecoText ? <Pill tone="blue">Modelo: {modeloPrecoText}</Pill> : null}
             {temValorEspaco ? <Pill tone="blue">Valor: {formatCurrencyBR(r.valor_espaco)}</Pill> : null}
             {temValorSinal ? <Pill tone="green">Sinal: {formatCurrencyBR(r.valor_sinal)}</Pill> : null}
+            {normLower(r.status) === 'aprovado_venda' ? <Pill tone="yellow">Falta: {formatCurrencyBR(faltaReceber)}</Pill> : null}
             <Pill tone="blue">Resp: {solicitanteNome ?? (r.user_id ? r.user_id.slice(0, 8) : '—')}</Pill>
             {hasObsText ? <Pill>Observação</Pill> : null}
             {hasFile ? <Pill>Anexo</Pill> : null}
@@ -418,6 +461,13 @@ function ReservationCard({
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
                   <div className="text-xs text-emerald-700">Valor de sinal adiantado</div>
                   <div className="mt-1 text-sm font-semibold text-emerald-900">{formatCurrencyBR(r.valor_sinal)}</div>
+                </div>
+              ) : null}
+
+              {normLower(r.status) === 'aprovado_venda' ? (
+                <div className="rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2">
+                  <div className="text-xs text-yellow-700">Falta receber na hora</div>
+                  <div className="mt-1 text-sm font-semibold text-yellow-900">{formatCurrencyBR(faltaReceber)}</div>
                 </div>
               ) : null}
 
@@ -550,6 +600,17 @@ export default function AdminPage() {
   const [reservaSelecionada, setReservaSelecionada] = useState<ReservaRow | null>(null)
   const [logsReserva, setLogsReserva] = useState<ReservaLogRow[]>([])
   const [loadingLogs, setLoadingLogs] = useState(false)
+
+  const [editMode, setEditMode] = useState(false)
+  const [editNome, setEditNome] = useState('')
+  const [editTelefone, setEditTelefone] = useState('')
+  const [editTipo, setEditTipo] = useState<Tipo>('venda')
+  const [editStatus, setEditStatus] = useState<Status>('pendente')
+  const [editModeloPreco, setEditModeloPreco] = useState('')
+  const [editValorEspaco, setEditValorEspaco] = useState('')
+  const [editValorSinal, setEditValorSinal] = useState('')
+  const [editObservacao, setEditObservacao] = useState('')
+  const [addSinalValor, setAddSinalValor] = useState('')
 
   const periodoLabel = useMemo(() => formatPeriodoLabel(dataInicial, dataFinal), [dataInicial, dataFinal])
 
@@ -700,9 +761,23 @@ export default function AdminPage() {
     setLoadingLogs(false)
   }
 
+  function popularFormularioEdicao(r: ReservaRow) {
+    setEditNome(String(r.nome ?? ''))
+    setEditTelefone(String(r.telefone ?? ''))
+    setEditTipo((normLower(r.tipo) || 'venda') as Tipo)
+    setEditStatus((normLower(r.status) || 'pendente') as Status)
+    setEditModeloPreco(String(r.modelo_preco ?? ''))
+    setEditValorEspaco(r.valor_espaco != null ? String(r.valor_espaco) : '')
+    setEditValorSinal(r.valor_sinal != null ? String(r.valor_sinal) : '')
+    setEditObservacao(String(r.observacao ?? ''))
+    setAddSinalValor('')
+  }
+
   async function abrirDetalhesReserva(r: ReservaRow) {
     setReservaSelecionada(r)
     setDetailsOpen(true)
+    setEditMode(false)
+    popularFormularioEdicao(r)
     await carregarLogsReserva(String(r.id))
   }
 
@@ -710,6 +785,8 @@ export default function AdminPage() {
     setDetailsOpen(false)
     setReservaSelecionada(null)
     setLogsReserva([])
+    setEditMode(false)
+    setAddSinalValor('')
   }
 
   useEffect(() => {
@@ -749,9 +826,11 @@ export default function AdminPage() {
         return
       }
       await fetchReservas()
+
+      const atualizada = { ...r, status: novoStatus }
       if (reservaSelecionada && String(reservaSelecionada.id) === idStr) {
-        const atualizada = { ...r, status: novoStatus }
         setReservaSelecionada(atualizada)
+        popularFormularioEdicao(atualizada)
         await carregarLogsReserva(idStr)
       }
     } finally {
@@ -777,11 +856,163 @@ export default function AdminPage() {
         return
       }
       await fetchReservas()
+
+      const atualizada = { ...r, status: 'cancelado' }
       if (reservaSelecionada && String(reservaSelecionada.id) === idStr) {
-        const atualizada = { ...r, status: 'cancelado' }
         setReservaSelecionada(atualizada)
+        popularFormularioEdicao(atualizada)
         await carregarLogsReserva(idStr)
       }
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  async function salvarEdicaoReserva() {
+    if (!reservaSelecionada) return
+
+    const nome = editNome.trim()
+    const telefone = onlyDigits(editTelefone)
+    const tipo = normLower(editTipo)
+    let status = normLower(editStatus)
+    const modeloPreco = editModeloPreco.trim() || null
+    const observacao = editObservacao.trim() || null
+
+    if (!nome) {
+      alert('Preencha o nome.')
+      return
+    }
+
+    if (telefone.length < 10) {
+      alert('Telefone inválido.')
+      return
+    }
+
+    let valorEspaco: number | null = null
+    let valorSinal: number | null = null
+
+    if (tipo === 'venda') {
+      const espacoNum = editValorEspaco.trim() === '' ? NaN : Number(editValorEspaco.replace(',', '.'))
+      const sinalNum = editValorSinal.trim() === '' ? 0 : Number(editValorSinal.replace(',', '.'))
+
+      if (!Number.isFinite(espacoNum) || espacoNum <= 0) {
+        alert('Informe um valor da mesa/camarote válido.')
+        return
+      }
+
+      if (!Number.isFinite(sinalNum) || sinalNum < 0) {
+        alert('Informe um valor de sinal válido.')
+        return
+      }
+
+      if (sinalNum > espacoNum) {
+        alert('O valor do sinal não pode ser maior que o valor total.')
+        return
+      }
+
+      valorEspaco = espacoNum
+      valorSinal = sinalNum
+
+      if (status !== 'pendente' && status !== 'aprovado_venda' && status !== 'cancelado') {
+        status = 'aprovado_venda'
+      }
+    } else {
+      valorEspaco = null
+      valorSinal = null
+
+      if (status === 'aprovado_venda') {
+        status = 'aprovado_cortesia'
+      }
+      if (status !== 'pendente' && status !== 'aprovado_cortesia' && status !== 'cancelado') {
+        status = 'aprovado_cortesia'
+      }
+    }
+
+    setErroUi(null)
+    const idStr = String(reservaSelecionada.id)
+    setUpdatingId(idStr)
+
+    try {
+      const payload = {
+        nome,
+        telefone,
+        tipo,
+        status,
+        modelo_preco: tipo === 'venda' ? modeloPreco : null,
+        valor_espaco: tipo === 'venda' ? valorEspaco : null,
+        valor_sinal: tipo === 'venda' ? valorSinal : null,
+        observacao,
+      }
+
+      const { data, error } = await supabase.from('reservas').update(payload).eq('id', reservaSelecionada.id).select('*').single()
+
+      if (error) {
+        console.error('Erro ao editar reserva:', error)
+        setErroUi(`Falha ao editar reserva: ${error.message}`)
+        return
+      }
+
+      const atualizada = data as ReservaRow
+      setReservaSelecionada(atualizada)
+      popularFormularioEdicao(atualizada)
+      setEditMode(false)
+      await fetchReservas()
+      await carregarLogsReserva(idStr)
+      alert('Reserva atualizada com sucesso.')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  async function adicionarAoSinalReserva() {
+    if (!reservaSelecionada) return
+
+    if (normLower(reservaSelecionada.tipo) !== 'venda') {
+      alert('Só é possível adicionar sinal em reservas de venda.')
+      return
+    }
+
+    const adicional = Number(addSinalValor.replace(',', '.'))
+    const atual = Number(reservaSelecionada.valor_sinal ?? 0)
+    const valorTotal = Number(reservaSelecionada.valor_espaco ?? 0)
+
+    if (!Number.isFinite(adicional) || adicional <= 0) {
+      alert('Informe um valor válido para adicionar ao sinal.')
+      return
+    }
+
+    const novoSinal = atual + adicional
+
+    if (valorTotal > 0 && novoSinal > valorTotal) {
+      alert('O novo sinal não pode ultrapassar o valor total da reserva.')
+      return
+    }
+
+    setErroUi(null)
+    const idStr = String(reservaSelecionada.id)
+    setUpdatingId(idStr)
+
+    try {
+      const { data, error } = await supabase
+        .from('reservas')
+        .update({ valor_sinal: novoSinal })
+        .eq('id', reservaSelecionada.id)
+        .select('*')
+        .single()
+
+      if (error) {
+        console.error('Erro ao adicionar ao sinal:', error)
+        setErroUi(`Falha ao atualizar sinal: ${error.message}`)
+        return
+      }
+
+      const atualizada = data as ReservaRow
+      setReservaSelecionada(atualizada)
+      popularFormularioEdicao(atualizada)
+      setAddSinalValor('')
+      await fetchReservas()
+      await carregarLogsReserva(idStr)
+      alert('Valor do sinal atualizado com sucesso.')
     } finally {
       setUpdatingId(null)
     }
@@ -816,14 +1047,12 @@ export default function AdminPage() {
     const cortesiasAprovadas = aprovadas.filter((r) => normLower(r.status) === 'aprovado_cortesia')
 
     const reservasVenda = reservas.filter((r) => normLower(r.tipo) === 'venda')
+    const reservasVendaAprovadas = reservas.filter((r) => normLower(r.status) === 'aprovado_venda')
 
-    const totalSinal = reservasVenda.reduce((acc, r) => acc + Number(r.valor_sinal ?? 0), 0)
+    const totalSinal = reservasVendaAprovadas.reduce((acc, r) => acc + Number(r.valor_sinal ?? 0), 0)
 
-    const totalFaltaReceber = reservasVenda.reduce((acc, r) => {
-      const valorBase = Number(r.valor_espaco ?? 0)
-      const sinal = Number(r.valor_sinal ?? 0)
-      const falta = Math.max(valorBase - sinal, 0)
-      return acc + falta
+    const totalFaltaReceber = reservasVendaAprovadas.reduce((acc, r) => {
+      return acc + valorFaltaReceber(r)
     }, 0)
 
     const porEventoMap = new Map<
@@ -836,7 +1065,7 @@ export default function AdminPage() {
       }
     >()
 
-    reservasVenda.forEach((r) => {
+    reservasVendaAprovadas.forEach((r) => {
       const key = r.data_evento
       const atual = porEventoMap.get(key) ?? {
         data_evento: key,
@@ -845,9 +1074,8 @@ export default function AdminPage() {
         reservasVenda: 0,
       }
 
-      const valorBase = Number(r.valor_espaco ?? 0)
       const sinal = Number(r.valor_sinal ?? 0)
-      const falta = Math.max(valorBase - sinal, 0)
+      const falta = valorFaltaReceber(r)
 
       atual.totalSinais += sinal
       atual.totalFaltaReceber += falta
@@ -867,6 +1095,19 @@ export default function AdminPage() {
     const pendentesFilaMesas = pendentesFila.filter((r) => r.espaco_id && isMesa(r.espaco_id))
     const pendentesFilaCamarotes = pendentesFila.filter((r) => r.espaco_id && isCamarote(r.espaco_id))
 
+    const cobrancaRecepcao = [...reservasVendaAprovadas].sort((a, b) => {
+      const dateCmp = String(a.data_evento).localeCompare(String(b.data_evento))
+      if (dateCmp !== 0) return dateCmp
+
+      const aMesa = isMesa(a.espaco_id)
+      const bMesa = isMesa(b.espaco_id)
+
+      if (aMesa && bMesa) return ordenarMesas(a, b)
+      if (!aMesa && !bMesa) return ordenarCamarotes(a, b)
+      if (!aMesa && bMesa) return -1
+      return 1
+    })
+
     return {
       pendentesPeriodo,
       aprovadas,
@@ -877,9 +1118,11 @@ export default function AdminPage() {
       totalFaltaReceber,
       financeiroPorEvento,
       reservasVenda,
+      reservasVendaAprovadas,
       pendentesFila,
       pendentesFilaMesas,
       pendentesFilaCamarotes,
+      cobrancaRecepcao,
     }
   }, [reservas, pendentesGlobais])
 
@@ -902,6 +1145,42 @@ export default function AdminPage() {
     if (relatorioStatus === 'aprovadas') return reservas.filter((r) => isAprovado(r.status))
     return reservas.filter((r) => isCancelado(r.status))
   }, [reservas, relatorioStatus])
+
+  function exportarRelatorioCobranca() {
+    if (computed.cobrancaRecepcao.length === 0) {
+      alert('Não há reservas aprovadas de venda para exportar no período selecionado.')
+      return
+    }
+
+    const rows = computed.cobrancaRecepcao.map((r) => [
+      formatBRDate(r.data_evento),
+      displayEspacoCompleto(r.espaco_id),
+      r.nome,
+      formatTelefoneRelatorio(r.telefone),
+      Number(r.valor_sinal ?? 0).toFixed(2).replace('.', ','),
+      Number(r.valor_espaco ?? 0).toFixed(2).replace('.', ','),
+      valorFaltaReceber(r).toFixed(2).replace('.', ','),
+    ])
+
+    const filename =
+      dataInicial && dataFinal && dataInicial === dataFinal
+        ? `relatorio-cobranca-${dataInicial}.csv`
+        : `relatorio-cobranca-${dataInicial || 'inicio'}-${dataFinal || 'fim'}.csv`
+
+    downloadCsv(
+      filename,
+      [
+        'Data do evento',
+        'Espaço',
+        'Nome do cliente',
+        'Telefone',
+        'Valor sinal antecipado',
+        'Valor total',
+        'Falta receber na hora',
+      ],
+      rows
+    )
+  }
 
   if (authChecking) {
     return <div className="min-h-screen bg-neutral-50 p-8 text-neutral-700">Verificando permissão…</div>
@@ -1180,11 +1459,64 @@ export default function AdminPage() {
 
             {mainTab === 'financeiro' ? (
               <>
-                <Section title={`Financeiro — ${periodoLabel}`} subtitle="Resumo financeiro das reservas de venda no período.">
+                <Section
+                  title={`Financeiro — ${periodoLabel}`}
+                  subtitle="Resumo financeiro das reservas aprovadas de venda no período."
+                  right={
+                    <button
+                      onClick={exportarRelatorioCobranca}
+                      className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+                    >
+                      Exportar relatório de cobrança
+                    </button>
+                  }
+                >
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <StatCard title="Reservas de venda" value={computed.reservasVenda.length} />
+                    <StatCard title="Reservas de venda aprovadas" value={computed.reservasVendaAprovadas.length} />
                     <StatCard title="Total de sinais" value={formatCurrencyBR(computed.totalSinal)} />
                     <StatCard title="Falta receber na hora" value={formatCurrencyBR(computed.totalFaltaReceber)} />
+                  </div>
+                </Section>
+
+                <Section
+                  title="Recepção / cobrança"
+                  subtitle="Lista operacional para cobrar o valor restante na entrada. A exportação usa estes mesmos dados."
+                >
+                  <div className="overflow-x-auto rounded-2xl border border-neutral-200">
+                    <table className="min-w-full bg-white text-sm">
+                      <thead className="bg-neutral-50">
+                        <tr className="text-left text-neutral-600">
+                          <th className="px-4 py-3 font-semibold">Data</th>
+                          <th className="px-4 py-3 font-semibold">Espaço</th>
+                          <th className="px-4 py-3 font-semibold">Nome</th>
+                          <th className="px-4 py-3 font-semibold">Telefone</th>
+                          <th className="px-4 py-3 font-semibold">Sinal</th>
+                          <th className="px-4 py-3 font-semibold">Valor total</th>
+                          <th className="px-4 py-3 font-semibold">Falta receber</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {computed.cobrancaRecepcao.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-6 text-center text-neutral-500">
+                              Nenhuma reserva aprovada de venda no período atual.
+                            </td>
+                          </tr>
+                        ) : (
+                          computed.cobrancaRecepcao.map((r) => (
+                            <tr key={String(r.id)} className="border-t border-neutral-200">
+                              <td className="px-4 py-3">{formatBRDate(r.data_evento)}</td>
+                              <td className="px-4 py-3 font-medium text-neutral-900">{displayEspacoCompleto(r.espaco_id)}</td>
+                              <td className="px-4 py-3">{r.nome}</td>
+                              <td className="px-4 py-3">{formatTelefoneRelatorio(r.telefone)}</td>
+                              <td className="px-4 py-3 text-emerald-700">{formatCurrencyBR(r.valor_sinal)}</td>
+                              <td className="px-4 py-3 text-blue-700">{formatCurrencyBR(r.valor_espaco)}</td>
+                              <td className="px-4 py-3 font-semibold text-yellow-700">{formatCurrencyBR(valorFaltaReceber(r))}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </Section>
 
@@ -1201,7 +1533,7 @@ export default function AdminPage() {
                           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                             <div>
                               <div className="text-base font-semibold text-neutral-900">{formatBRDate(item.data_evento)}</div>
-                              <div className="mt-1 text-sm text-neutral-500">{item.reservasVenda} reserva(s) de venda no período</div>
+                              <div className="mt-1 text-sm text-neutral-500">{item.reservasVenda} reserva(s) de venda aprovada</div>
                             </div>
 
                             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -1231,7 +1563,7 @@ export default function AdminPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <button className="absolute inset-0 bg-black/40" onClick={fecharDetalhesReserva} aria-label="Fechar" />
 
-          <div className="relative w-full max-w-4xl rounded-3xl border border-neutral-200 bg-white p-5 shadow-2xl">
+          <div className="relative max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-neutral-200 bg-white p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h3 className="text-lg font-semibold tracking-tight text-neutral-900">
@@ -1262,59 +1594,259 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-                <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-500">Dados da reserva</h4>
+            <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-3">
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 xl:col-span-1">
+                <div className="mb-4 flex items-center justify-between">
+                  <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-500">Dados da reserva</h4>
 
-                <div className="mt-4 space-y-3 text-sm">
-                  <div>
-                    <div className="text-neutral-500">Status</div>
-                    <div className="mt-1">
-                      <Pill tone={statusTone(reservaSelecionada.status)}>{statusBadgeText(reservaSelecionada.status)}</Pill>
+                  <button
+                    onClick={() => {
+                      setEditMode((v) => !v)
+                      popularFormularioEdicao(reservaSelecionada)
+                    }}
+                    className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
+                  >
+                    {editMode ? 'Fechar edição' : 'Editar reserva'}
+                  </button>
+                </div>
+
+                {!editMode ? (
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <div className="text-neutral-500">Status</div>
+                      <div className="mt-1">
+                        <Pill tone={statusTone(reservaSelecionada.status)}>{statusBadgeText(reservaSelecionada.status)}</Pill>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-neutral-500">Tipo</div>
+                      <div className="mt-1 font-medium text-neutral-900">{labelTipo(reservaSelecionada.tipo)}</div>
+                    </div>
+
+                    <div>
+                      <div className="text-neutral-500">Solicitante</div>
+                      <div className="mt-1 font-medium text-neutral-900">
+                        {reservaSelecionada.user_id ? profileNameById.get(reservaSelecionada.user_id) ?? reservaSelecionada.user_id.slice(0, 8) : '—'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-neutral-500">Modelo de preço</div>
+                      <div className="mt-1 font-medium text-neutral-900">{String(reservaSelecionada.modelo_preco ?? '').trim() || '—'}</div>
+                    </div>
+
+                    <div>
+                      <div className="text-neutral-500">Valor da mesa/camarote</div>
+                      <div className="mt-1 rounded-xl border border-blue-200 bg-blue-50 p-3 font-semibold text-blue-900">
+                        {Number(reservaSelecionada.valor_espaco ?? 0) > 0 ? formatCurrencyBR(reservaSelecionada.valor_espaco) : '—'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-neutral-500">Valor do sinal adiantado</div>
+                      <div className="mt-1 rounded-xl border border-emerald-200 bg-emerald-50 p-3 font-semibold text-emerald-900">
+                        {Number(reservaSelecionada.valor_sinal ?? 0) > 0 ? formatCurrencyBR(reservaSelecionada.valor_sinal) : '—'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-neutral-500">Falta receber</div>
+                      <div className="mt-1 rounded-xl border border-yellow-200 bg-yellow-50 p-3 font-semibold text-yellow-900">
+                        {normLower(reservaSelecionada.tipo) === 'venda' ? formatCurrencyBR(valorFaltaReceber(reservaSelecionada)) : '—'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-neutral-500">Observação</div>
+                      <div className="mt-1 whitespace-pre-wrap break-words rounded-xl border border-neutral-200 bg-white p-3 text-neutral-800">
+                        {String(reservaSelecionada.observacao ?? '').trim() || 'Sem observação'}
+                      </div>
                     </div>
                   </div>
+                ) : (
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <label className="text-neutral-500">Nome</label>
+                      <input
+                        value={editNome}
+                        onChange={(e) => setEditNome(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                      />
+                    </div>
 
-                  <div>
-                    <div className="text-neutral-500">Tipo</div>
+                    <div>
+                      <label className="text-neutral-500">Telefone</label>
+                      <input
+                        value={editTelefone}
+                        onChange={(e) => setEditTelefone(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="text-neutral-500">Tipo</label>
+                        <select
+                          value={editTipo}
+                          onChange={(e) => setEditTipo(e.target.value as Tipo)}
+                          className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                        >
+                          <option value="aniversario">Aniversário</option>
+                          <option value="cortesia">Cortesia</option>
+                          <option value="venda">Venda</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-neutral-500">Status</label>
+                        <select
+                          value={editStatus}
+                          onChange={(e) => setEditStatus(e.target.value as Status)}
+                          className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                        >
+                          <option value="pendente">Pendente</option>
+                          <option value="aprovado_venda">Aprovado venda</option>
+                          <option value="aprovado_cortesia">Aprovado cortesia</option>
+                          <option value="cancelado">Cancelado</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {normLower(editTipo) === 'venda' ? (
+                      <>
+                        <div>
+                          <label className="text-neutral-500">Modelo de preço</label>
+                          <input
+                            value={editModeloPreco}
+                            onChange={(e) => setEditModeloPreco(e.target.value)}
+                            className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <div>
+                            <label className="text-neutral-500">Valor total</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={editValorEspaco}
+                              onChange={(e) => setEditValorEspaco(e.target.value)}
+                              className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-neutral-500">Valor do sinal</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={editValorSinal}
+                              onChange={(e) => setEditValorSinal(e.target.value)}
+                              className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    ) : null}
+
+                    <div>
+                      <label className="text-neutral-500">Observação</label>
+                      <textarea
+                        value={editObservacao}
+                        onChange={(e) => setEditObservacao(e.target.value)}
+                        rows={4}
+                        className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      <button
+                        onClick={salvarEdicaoReserva}
+                        disabled={updatingId === String(reservaSelecionada.id)}
+                        className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-55"
+                      >
+                        {updatingId === String(reservaSelecionada.id) ? 'Salvando…' : 'Salvar edição'}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          popularFormularioEdicao(reservaSelecionada)
+                          setEditMode(false)
+                        }}
+                        className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                      >
+                        Cancelar edição
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 xl:col-span-1">
+                <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-500">Complementar sinal</h4>
+
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-xl border border-neutral-200 bg-white p-3">
+                    <div className="text-xs text-neutral-500">Tipo da reserva</div>
                     <div className="mt-1 font-medium text-neutral-900">{labelTipo(reservaSelecionada.tipo)}</div>
                   </div>
 
-                  <div>
-                    <div className="text-neutral-500">Solicitante</div>
-                    <div className="mt-1 font-medium text-neutral-900">
-                      {reservaSelecionada.user_id ? profileNameById.get(reservaSelecionada.user_id) ?? reservaSelecionada.user_id.slice(0, 8) : '—'}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-neutral-500">Modelo de preço</div>
-                    <div className="mt-1 font-medium text-neutral-900">{String(reservaSelecionada.modelo_preco ?? '').trim() || '—'}</div>
-                  </div>
-
-                  <div>
-                    <div className="text-neutral-500">Valor da mesa/camarote</div>
-                    <div className="mt-1 rounded-xl border border-blue-200 bg-blue-50 p-3 font-semibold text-blue-900">
+                  <div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
+                    <div className="text-xs text-blue-700">Valor total</div>
+                    <div className="mt-1 font-semibold text-blue-900">
                       {Number(reservaSelecionada.valor_espaco ?? 0) > 0 ? formatCurrencyBR(reservaSelecionada.valor_espaco) : '—'}
                     </div>
                   </div>
 
-                  <div>
-                    <div className="text-neutral-500">Valor do sinal adiantado</div>
-                    <div className="mt-1 rounded-xl border border-emerald-200 bg-emerald-50 p-3 font-semibold text-emerald-900">
-                      {Number(reservaSelecionada.valor_sinal ?? 0) > 0 ? formatCurrencyBR(reservaSelecionada.valor_sinal) : '—'}
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                    <div className="text-xs text-emerald-700">Sinal atual</div>
+                    <div className="mt-1 font-semibold text-emerald-900">
+                      {Number(reservaSelecionada.valor_sinal ?? 0) > 0 ? formatCurrencyBR(reservaSelecionada.valor_sinal) : formatCurrencyBR(0)}
                     </div>
                   </div>
 
-                  <div>
-                    <div className="text-neutral-500">Observação</div>
-                    <div className="mt-1 whitespace-pre-wrap break-words rounded-xl border border-neutral-200 bg-white p-3 text-neutral-800">
-                      {String(reservaSelecionada.observacao ?? '').trim() || 'Sem observação'}
+                  <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-3">
+                    <div className="text-xs text-yellow-700">Falta receber</div>
+                    <div className="mt-1 font-semibold text-yellow-900">
+                      {normLower(reservaSelecionada.tipo) === 'venda' ? formatCurrencyBR(valorFaltaReceber(reservaSelecionada)) : '—'}
                     </div>
                   </div>
+
+                  {normLower(reservaSelecionada.tipo) === 'venda' ? (
+                    <>
+                      <div>
+                        <label className="text-neutral-500">Adicionar valor ao sinal</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={addSinalValor}
+                          onChange={(e) => setAddSinalValor(e.target.value)}
+                          placeholder="Ex: 200.00"
+                          className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                        />
+                      </div>
+
+                      <button
+                        onClick={adicionarAoSinalReserva}
+                        disabled={updatingId === String(reservaSelecionada.id)}
+                        className="w-full rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-55"
+                      >
+                        {updatingId === String(reservaSelecionada.id) ? 'Salvando…' : 'Adicionar ao sinal'}
+                      </button>
+                    </>
+                  ) : (
+                    <div className="rounded-xl border border-neutral-200 bg-white p-3 text-sm text-neutral-500">
+                      O complemento de sinal só fica disponível para reservas do tipo venda.
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 xl:col-span-1">
                 <div className="mb-3 flex items-center justify-between">
                   <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-500">Histórico de ações</h4>
 
