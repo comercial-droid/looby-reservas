@@ -27,6 +27,25 @@ type ReservaRow = {
   created_at?: string
 }
 
+type ConfigPrecoRow = {
+  id: number
+  tipo_espaco: 'MESA' | 'CAMAROTE' | string
+  nome_modelo: string
+  valor_total: number
+  valor_consumacao: number
+  ativo: boolean
+  ordem: number
+  created_at?: string
+}
+
+type ConfigBebidaRow = {
+  id: number
+  nome: string
+  ativo: boolean
+  ordem: number
+  created_at?: string
+}
+
 function todayISO() {
   const d = new Date()
   const yyyy = d.getFullYear()
@@ -91,19 +110,6 @@ function formatCurrencyBR(value?: number | null) {
   })
 }
 
-function parseValorBaseModeloPreco(modeloPreco?: string | null) {
-  const raw = String(modeloPreco ?? '').trim()
-  if (!raw) return ''
-
-  const match = raw.match(/(\d+(?:[.,]\d+)?)/)
-  if (!match) return ''
-
-  const n = Number(match[1].replace(',', '.'))
-  if (!Number.isFinite(n)) return ''
-
-  return String(n)
-}
-
 function getSvgElByKnownId(svgEl: SVGSVGElement, raw: string): SVGGraphicsElement | null {
   const variants = [raw, raw.toLowerCase(), raw.toUpperCase()]
 
@@ -142,7 +148,7 @@ function getDataEventoOperacional(now?: Date) {
   return dateToISO(d)
 }
 
-const PRECOS_CAMAROTE = [
+const PRECOS_CAMAROTE_FALLBACK = [
   'Camarote 3000/1600 consumação',
   'Camarote 4000/2500 consumação',
   'Camarote 2000/1000 consumação',
@@ -150,14 +156,14 @@ const PRECOS_CAMAROTE = [
   'Camarote 1300/1000 consumação',
 ]
 
-const PRECOS_MESA = [
+const PRECOS_MESA_FALLBACK = [
   'Mesa Vip 1500/900 consumação',
   'Mesa vip 1000/570 consumação',
   'Mesa vip 870/570 consumação',
   'Mesa vip 700/570 consumação',
 ]
 
-const OPCOES_BEBIDA_CORTESIA = [
+const OPCOES_BEBIDA_CORTESIA_FALLBACK = [
   'sem bebida',
   'Combão',
   'vodka',
@@ -209,6 +215,9 @@ export default function Home() {
   const [reservasDia, setReservasDia] = useState<ReservaRow[]>([])
   const [loadingReservas, setLoadingReservas] = useState(false)
 
+  const [configPrecos, setConfigPrecos] = useState<ConfigPrecoRow[]>([])
+  const [configBebidas, setConfigBebidas] = useState<ConfigBebidaRow[]>([])
+
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null)
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
@@ -232,6 +241,7 @@ export default function Home() {
 
   const vendaNaHoraAtiva = useMemo(() => isJanelaVendaNaHora(now), [now])
   const dataEventoOperacional = useMemo(() => getDataEventoOperacional(now), [now])
+
   const vendaAntecipadaLiberada = useMemo(() => {
     return !(vendaNaHoraAtiva && dataEvento === dataEventoOperacional)
   }, [vendaNaHoraAtiva, dataEvento, dataEventoOperacional])
@@ -242,6 +252,53 @@ export default function Home() {
   }, [dataEvento, vendaNaHoraAtiva, dataEventoOperacional])
 
   const mostrarCampoBebida = tipoReserva === 'ANIVERSARIO' || tipoReserva === 'CORTESIA'
+
+  const precosCamarote = useMemo(() => {
+    const lista = configPrecos.filter(
+      (item) => item.ativo && normTipo(item.tipo_espaco) === 'camarote'
+    )
+    if (lista.length > 0) return lista
+    return PRECOS_CAMAROTE_FALLBACK.map((nome, index) => ({
+      id: index + 1,
+      tipo_espaco: 'CAMAROTE',
+      nome_modelo: nome,
+      valor_total: Number((nome.match(/(\d+(?:[.,]\d+)?)/)?.[1] || '0').replace(',', '.')),
+      valor_consumacao: 0,
+      ativo: true,
+      ordem: index + 1,
+    })) as ConfigPrecoRow[]
+  }, [configPrecos])
+
+  const precosMesa = useMemo(() => {
+    const lista = configPrecos.filter(
+      (item) => item.ativo && normTipo(item.tipo_espaco) === 'mesa'
+    )
+    if (lista.length > 0) return lista
+    return PRECOS_MESA_FALLBACK.map((nome, index) => ({
+      id: index + 100,
+      tipo_espaco: 'MESA',
+      nome_modelo: nome,
+      valor_total: Number((nome.match(/(\d+(?:[.,]\d+)?)/)?.[1] || '0').replace(',', '.')),
+      valor_consumacao: 0,
+      ativo: true,
+      ordem: index + 1,
+    })) as ConfigPrecoRow[]
+  }, [configPrecos])
+
+  const opcoesBebida = useMemo(() => {
+    const lista = configBebidas
+      .filter((item) => item.ativo)
+      .map((item) => String(item.nome ?? '').trim())
+      .filter(Boolean)
+
+    if (lista.length > 0) return lista
+    return OPCOES_BEBIDA_CORTESIA_FALLBACK
+  }, [configBebidas])
+
+  const modeloPrecoSelecionado = useMemo(() => {
+    const lista = isCamarote ? precosCamarote : precosMesa
+    return lista.find((item) => item.nome_modelo === modeloPreco) ?? null
+  }, [isCamarote, precosCamarote, precosMesa, modeloPreco])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -380,6 +437,38 @@ export default function Home() {
   const modeloPrecoObrigatorio = tipoFinanceiro
   const valorSinalObrigatorio = tipoFinanceiro
 
+  async function fetchConfigPrecos() {
+    const { data, error } = await supabase
+      .from('config_precos_reserva')
+      .select('*')
+      .eq('ativo', true)
+      .order('ordem', { ascending: true })
+      .order('nome_modelo', { ascending: true })
+
+    if (error) {
+      console.error('Erro ao buscar config_precos_reserva:', error)
+      return
+    }
+
+    setConfigPrecos((data ?? []) as ConfigPrecoRow[])
+  }
+
+  async function fetchConfigBebidas() {
+    const { data, error } = await supabase
+      .from('config_bebidas')
+      .select('*')
+      .eq('ativo', true)
+      .order('ordem', { ascending: true })
+      .order('nome', { ascending: true })
+
+    if (error) {
+      console.error('Erro ao buscar config_bebidas:', error)
+      return
+    }
+
+    setConfigBebidas((data ?? []) as ConfigBebidaRow[])
+  }
+
   useEffect(() => {
     let active = true
 
@@ -406,6 +495,8 @@ export default function Home() {
 
       setIsAdmin(!!adminRow)
       setAuthChecking(false)
+
+      await Promise.all([fetchConfigPrecos(), fetchConfigBebidas()])
     }
 
     check()
@@ -450,9 +541,21 @@ export default function Home() {
 
   useEffect(() => {
     if (!tipoFinanceiro) return
-    const sugerido = parseValorBaseModeloPreco(modeloPreco)
-    setValorEspaco(sugerido)
-  }, [modeloPreco, tipoFinanceiro])
+
+    if (!modeloPrecoSelecionado) {
+      setValorEspaco('')
+      return
+    }
+
+    setValorEspaco(String(modeloPrecoSelecionado.valor_total))
+  }, [modeloPrecoSelecionado, tipoFinanceiro])
+
+  useEffect(() => {
+    if (!mostrarCampoBebida) return
+    if (!opcoesBebida.includes(bebidaCortesia)) {
+      setBebidaCortesia(opcoesBebida[0] || 'sem bebida')
+    }
+  }, [mostrarCampoBebida, opcoesBebida, bebidaCortesia])
 
   async function carregarReservasDoDia(dateISO: string) {
     setLoadingReservas(true)
@@ -919,7 +1022,7 @@ export default function Home() {
     setModeloPreco('')
     setValorEspaco('')
     setValorSinal('')
-    setBebidaCortesia('sem bebida')
+    setBebidaCortesia(opcoesBebida[0] || 'sem bebida')
     setObservacao('')
     setAnexoObs(null)
     setModalOpen(true)
@@ -1743,7 +1846,7 @@ export default function Home() {
                           onChange={(e) => setBebidaCortesia(e.target.value)}
                           className={INPUT_CLASS}
                         >
-                          {OPCOES_BEBIDA_CORTESIA.map((opcao) => (
+                          {opcoesBebida.map((opcao) => (
                             <option key={opcao} value={opcao}>
                               {opcao}
                             </option>
@@ -1765,9 +1868,9 @@ export default function Home() {
                         >
                           <option value="">Selecione</option>
 
-                          {(isCamarote ? PRECOS_CAMAROTE : PRECOS_MESA).map((p) => (
-                            <option key={p} value={p}>
-                              {p}
+                          {(isCamarote ? precosCamarote : precosMesa).map((p) => (
+                            <option key={p.id} value={p.nome_modelo}>
+                              {p.nome_modelo}
                             </option>
                           ))}
                         </select>
