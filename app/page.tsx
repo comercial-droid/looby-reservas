@@ -174,20 +174,20 @@ const OPCOES_BEBIDA_CORTESIA_FALLBACK = [
 const RED_CARD =
   'rounded-2xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.28)]'
 const RED_CARD_LIGHT =
-  'rounded-2xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]'
+  'rounded-2xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] p-4 sm:p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]'
 const RED_INNER =
   'rounded-xl border border-white/10 bg-white/8 backdrop-blur-sm'
 const INPUT_CLASS =
-  'mt-1 w-full rounded-xl border border-red-950/40 bg-white/95 px-3 py-2 text-neutral-900 outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-700/20'
+  'mt-1 w-full rounded-xl border border-red-950/40 bg-white/95 px-3 py-3 text-[16px] text-neutral-900 outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-700/20'
 const LABEL_CLASS = 'text-sm font-medium text-red-50/88'
 const MUTED_TEXT = 'text-red-50/70'
 const SOFT_TEXT = 'text-red-50/85'
 const PRIMARY_BTN =
-  'rounded-xl bg-red-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-800'
+  'inline-flex min-h-[44px] items-center justify-center rounded-xl bg-red-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-800 active:scale-[0.99]'
 const SECONDARY_BTN =
-  'rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-red-50 transition hover:bg-white/15'
+  'inline-flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-red-50 transition hover:bg-white/15 active:scale-[0.99]'
 const GHOST_BTN =
-  'rounded-lg border border-white/12 bg-white/5 px-2 py-1 text-xs text-red-50/90 transition hover:bg-white/10'
+  'inline-flex min-h-[40px] items-center justify-center rounded-lg border border-white/12 bg-white/5 px-3 py-2 text-xs font-medium text-red-50/90 transition hover:bg-white/10 active:scale-[0.99]'
 
 export default function Home() {
   const router = useRouter()
@@ -238,6 +238,7 @@ export default function Home() {
   const [detailsReserva, setDetailsReserva] = useState<ReservaRow | null>(null)
 
   const [isTouchDevice, setIsTouchDevice] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   const vendaNaHoraAtiva = useMemo(() => isJanelaVendaNaHora(now), [now])
   const dataEventoOperacional = useMemo(() => getDataEventoOperacional(now), [now])
@@ -509,11 +510,30 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+
     const touch =
       'ontouchstart' in window ||
       navigator.maxTouchPoints > 0 ||
       window.matchMedia('(pointer: coarse)').matches
+
     setIsTouchDevice(touch)
+
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+
+      if (mobile) {
+        setMapScale(0.92)
+        setMapOffset({ x: 0, y: 0 })
+      } else {
+        setMapScale(1)
+        setMapOffset({ x: 0, y: 0 })
+      }
+    }
+
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
   }, [])
 
   useEffect(() => {
@@ -891,7 +911,7 @@ export default function Home() {
   }
 
   function resetMapView() {
-    setMapScale(1)
+    setMapScale(isMobile ? 0.92 : 1)
     setMapOffset({ x: 0, y: 0 })
   }
 
@@ -1085,7 +1105,7 @@ export default function Home() {
       svg.style.maxWidth = '920px'
       svg.style.margin = '0 auto'
       svg.style.overflow = 'visible'
-      svg.setAttribute('preserveAspectRatio', 'xMinYMin meet')
+      svg.setAttribute('preserveAspectRatio', 'xMidYMid meet')
 
       VALID_IDS.forEach((raw) => {
         const id = raw.toLowerCase()
@@ -1324,17 +1344,17 @@ export default function Home() {
   }
 
   if (authChecking) {
-    return <div className="min-h-screen bg-[#1a0b0f] p-6 text-red-50/80">Verificando login...</div>
+    return <div className="min-h-svh bg-[#1a0b0f] p-6 text-red-50/80">Verificando login...</div>
   }
 
   if (step === 'DATA') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,#4f111a_0%,#18090c_55%,#090406_100%)] p-6 text-red-50">
+      <div className="flex min-h-svh items-center justify-center bg-[radial-gradient(circle_at_top,#4f111a_0%,#18090c_55%,#090406_100%)] px-4 py-6 text-red-50 sm:p-6">
         <div className={`w-full max-w-xl ${RED_CARD_LIGHT}`}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-semibold text-white">Reservas — Looby</h1>
-              <p className={`mt-2 ${SOFT_TEXT}`}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold text-white sm:text-3xl">Reservas — Looby</h1>
+              <p className={`mt-2 text-sm leading-6 sm:text-base ${SOFT_TEXT}`}>
                 {vendaNaHoraAtiva ? (
                   <>
                     Janela operacional ativa. As solicitações feitas agora entram como{' '}
@@ -1349,18 +1369,18 @@ export default function Home() {
               </p>
             </div>
 
-            <button onClick={sair} className={PRIMARY_BTN}>
+            <button onClick={sair} className={`${PRIMARY_BTN} w-full sm:w-auto`}>
               Sair
             </button>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button onClick={() => router.push('/minhas-reservas')} className={SECONDARY_BTN}>
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+            <button onClick={() => router.push('/minhas-reservas')} className={`${SECONDARY_BTN} w-full sm:w-auto`}>
               Meu relatório
             </button>
 
             {isAdmin ? (
-              <button onClick={() => router.push('/admin')} className={SECONDARY_BTN}>
+              <button onClick={() => router.push('/admin')} className={`${SECONDARY_BTN} w-full sm:w-auto`}>
                 Admin
               </button>
             ) : null}
@@ -1380,11 +1400,11 @@ export default function Home() {
             />
 
             {vendaNaHoraAtiva ? (
-              <p className="mt-2 text-xs text-sky-200">
+              <p className="mt-2 text-xs leading-5 text-sky-200">
                 ℹ️ Das 23:00 até 07:00, o sistema usa automaticamente a data operacional do evento para reservas na hora.
               </p>
             ) : isPastDateISO(dataEvento) ? (
-              <p className="mt-2 text-xs text-amber-200">
+              <p className="mt-2 text-xs leading-5 text-amber-200">
                 ⚠️ Data passada: você pode visualizar o mapa como histórico, mas não poderá solicitar reservas.
               </p>
             ) : null}
@@ -1392,73 +1412,77 @@ export default function Home() {
 
           <button
             onClick={() => setStep('MAPA')}
-            className="mt-6 w-full rounded-xl bg-white py-2 font-semibold text-[#5b1019] transition hover:bg-red-50"
+            className="mt-6 inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-white px-4 py-3 text-base font-semibold text-[#5b1019] transition hover:bg-red-50"
           >
             Avançar para o mapa
           </button>
 
-          <p className="mt-4 text-xs text-red-50/55">(O mapa busca reservas dessa data no Supabase.)</p>
+          <p className="mt-4 text-xs leading-5 text-red-50/55">
+            (O mapa busca reservas dessa data no Supabase.)
+          </p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#4f111a_0%,#18090c_45%,#090406_100%)] p-4 text-red-50 sm:p-6">
+    <div className="min-h-svh overflow-x-hidden bg-[radial-gradient(circle_at_top,#4f111a_0%,#18090c_45%,#090406_100%)] px-3 py-4 text-red-50 sm:px-4 sm:py-6">
       <div className="mx-auto max-w-[1400px]">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-6 border-b border-white/10 pb-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="flex items-center gap-3 text-2xl font-bold">
-                <img src="/logo-looby.png" alt="Looby" className="h-12 w-auto" />
-                Mapa de Reservas
+        <div className="mb-5 flex flex-col gap-4 border-b border-white/10 pb-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <h1 className="flex min-w-0 items-center gap-3 text-xl font-bold sm:text-2xl">
+                <img src="/logo-looby.png" alt="Looby" className="h-10 w-auto sm:h-12" />
+                <span className="truncate">Mapa de Reservas</span>
               </h1>
 
-              <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-red-50/85">
-                {dataEvento}
-              </span>
-
-              {vendaNaHoraAtiva ? (
-                <span className="rounded-full border border-sky-300/30 bg-sky-400/15 px-3 py-1 text-xs text-sky-100">
-                  Janela: venda na hora
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-red-50/85">
+                  {dataEvento}
                 </span>
-              ) : null}
+
+                {vendaNaHoraAtiva ? (
+                  <span className="rounded-full border border-sky-300/30 bg-sky-400/15 px-3 py-1 text-xs text-sky-100">
+                    Janela: venda na hora
+                  </span>
+                ) : null}
+              </div>
             </div>
 
-            <p className="mt-2 text-sm text-red-50/70">
+            <p className="mt-2 text-sm leading-6 text-red-50/70">
               Clique em um espaço para solicitar reserva ou visualizar detalhes.
             </p>
 
             <button
               onClick={() => setStep('DATA')}
-              className="mt-2 text-sm text-red-50/70 underline underline-offset-4 hover:text-white"
+              className="mt-2 text-left text-sm text-red-50/70 underline underline-offset-4 hover:text-white"
             >
               ← Escolher outra data
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button onClick={() => router.push('/minhas-reservas')} className={SECONDARY_BTN}>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:justify-end">
+            <button onClick={() => router.push('/minhas-reservas')} className={`${SECONDARY_BTN} w-full`}>
               Meu relatório
             </button>
 
             {isAdmin ? (
-              <button onClick={() => router.push('/admin')} className={SECONDARY_BTN}>
+              <button onClick={() => router.push('/admin')} className={`${SECONDARY_BTN} w-full`}>
                 Voltar Admin
               </button>
             ) : null}
 
-            <button onClick={sair} className={PRIMARY_BTN}>
+            <button onClick={sair} className={`${PRIMARY_BTN} w-full`}>
               Sair
             </button>
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 items-start gap-4 lg:grid-cols-[290px_minmax(0,1fr)]">
-          <div className="order-2 space-y-4 lg:order-1">
+        <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="order-2 space-y-4 xl:order-1">
             <div className={RED_CARD}>
               <div className="flex items-center justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <div className="font-semibold text-white">Legenda</div>
                   <div className="text-xs text-red-50/65">Status dos espaços no mapa</div>
                 </div>
@@ -1471,27 +1495,27 @@ export default function Home() {
               {showLegend ? (
                 <div className="mt-3 space-y-2 text-sm text-red-50/90">
                   <div className="flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 rounded border border-white/20 bg-white/30" />
+                    <span className="h-3.5 w-3.5 shrink-0 rounded border border-white/20 bg-white/30" />
                     <span>Livre</span>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 rounded border border-yellow-300 bg-yellow-400/90" />
+                    <span className="h-3.5 w-3.5 shrink-0 rounded border border-yellow-300 bg-yellow-400/90" />
                     <span>Pendente</span>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 rounded border border-orange-300 bg-orange-500/90" />
+                    <span className="h-3.5 w-3.5 shrink-0 rounded border border-orange-300 bg-orange-500/90" />
                     <span>Aprovado (Cortesia/Aniversário)</span>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 rounded border border-emerald-300 bg-green-500/90" />
+                    <span className="h-3.5 w-3.5 shrink-0 rounded border border-emerald-300 bg-green-500/90" />
                     <span>Aprovado (Venda antecipada)</span>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 rounded border border-sky-300 bg-sky-300/90" />
+                    <span className="h-3.5 w-3.5 shrink-0 rounded border border-sky-300 bg-sky-300/90" />
                     <span>Aprovado (Venda na hora)</span>
                   </div>
 
@@ -1505,37 +1529,37 @@ export default function Home() {
               <div className="mt-1 text-xs text-red-50/65">Quantidade e tipo das reservas</div>
 
               <div className="mt-3 space-y-2 text-sm">
-                <div className={`${RED_INNER} flex items-center justify-between px-3 py-2`}>
+                <div className={`${RED_INNER} flex items-center justify-between gap-3 px-3 py-2`}>
                   <span className="text-red-50/88">Total de reservas</span>
                   <b className="text-white">{loadingReservas ? '...' : totalReservasDia}</b>
                 </div>
 
-                <div className={`${RED_INNER} flex items-center justify-between px-3 py-2`}>
+                <div className={`${RED_INNER} flex items-center justify-between gap-3 px-3 py-2`}>
                   <span className="text-red-50/88">Pendentes</span>
                   <b className="text-white">{loadingReservas ? '...' : pendentesCount}</b>
                 </div>
 
-                <div className={`${RED_INNER} flex items-center justify-between px-3 py-2`}>
+                <div className={`${RED_INNER} flex items-center justify-between gap-3 px-3 py-2`}>
                   <span className="text-red-50/88">Aprovadas (Venda antecipada)</span>
                   <b className="text-white">{loadingReservas ? '...' : aprovadoVendaCount}</b>
                 </div>
 
-                <div className={`${RED_INNER} flex items-center justify-between px-3 py-2`}>
+                <div className={`${RED_INNER} flex items-center justify-between gap-3 px-3 py-2`}>
                   <span className="text-red-50/88">Aprovadas (Venda na hora)</span>
                   <b className="text-white">{loadingReservas ? '...' : aprovadoNaHoraCount}</b>
                 </div>
 
-                <div className={`${RED_INNER} flex items-center justify-between px-3 py-2`}>
+                <div className={`${RED_INNER} flex items-center justify-between gap-3 px-3 py-2`}>
                   <span className="text-red-50/88">Aprovadas (Cortesia/Aniversário)</span>
                   <b className="text-white">{loadingReservas ? '...' : aprovadoCortesiaCount}</b>
                 </div>
 
-                <div className={`${RED_INNER} flex items-center justify-between px-3 py-2`}>
+                <div className={`${RED_INNER} flex items-center justify-between gap-3 px-3 py-2`}>
                   <span className="text-red-50/88">Mesas reservadas</span>
                   <b className="text-white">{loadingReservas ? '...' : mesasReservadasCount}</b>
                 </div>
 
-                <div className={`${RED_INNER} flex items-center justify-between px-3 py-2`}>
+                <div className={`${RED_INNER} flex items-center justify-between gap-3 px-3 py-2`}>
                   <span className="text-red-50/88">Camarotes reservados</span>
                   <b className="text-white">{loadingReservas ? '...' : camarotesReservadosCount}</b>
                 </div>
@@ -1561,22 +1585,22 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="mt-4 text-xs text-red-50/55">
+              <div className="mt-4 text-xs leading-5 text-red-50/55">
                 Clique no mapa para solicitar uma reserva ou visualizar detalhes.
               </div>
             </div>
           </div>
 
-          <div className="order-1 min-w-0 lg:order-2">
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/6 p-3 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-sm">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                <div className="text-xs text-red-50/70">
+          <div className="order-1 min-w-0 xl:order-2">
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/6 p-3 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-sm sm:p-4">
+              <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-xs leading-5 text-red-50/70">
                   {isTouchDevice
                     ? 'No celular: toque nos espaços e use os botões + / - para zoom.'
                     : 'No desktop: use o mouse para hover, roda para zoom e clique para interagir.'}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
                   <button type="button" onClick={zoomOut} className={GHOST_BTN} aria-label="Diminuir zoom">
                     −
                   </button>
@@ -1598,15 +1622,16 @@ export default function Home() {
                 </div>
               )}
 
-              <div className="w-full overflow-x-auto">
-                <div className="relative mx-auto w-full max-w-[920px]">
+              <div className="w-full">
+                <div className="relative mx-auto w-full max-w-[920px] overflow-hidden rounded-xl border border-white/10 bg-black/10">
                   <div
                     ref={svgWrapRef}
-                    className={`relative w-full rounded-xl ${dragging ? 'cursor-grabbing' : 'cursor-default'}`}
+                    className={`relative w-full ${dragging ? 'cursor-grabbing' : isTouchDevice ? 'cursor-default' : 'cursor-grab'}`}
                     style={{
                       display: mapReady ? 'block' : 'none',
+                      minHeight: isMobile ? '420px' : '560px',
                       transform: `translate(${mapOffset.x}px, ${mapOffset.y}px) scale(${mapScale})`,
-                      transformOrigin: 'center',
+                      transformOrigin: 'center center',
                       touchAction: 'none',
                     }}
                     onWheel={handleZoom}
@@ -1645,16 +1670,16 @@ export default function Home() {
                       handleClickEspaco(id)
                     }}
                   >
-                    <div ref={svgHostRef} />
+                    <div ref={svgHostRef} className="mx-auto w-full max-w-[920px]" />
                   </div>
 
                   {!isTouchDevice && hoveredId && tooltipPos ? (
                     <div
-                      className="pointer-events-none absolute z-20 min-w-[190px] rounded-xl border border-red-950/30 bg-white px-3 py-2 shadow-2xl"
+                      className="pointer-events-none absolute z-20 min-w-[190px] max-w-[240px] rounded-xl border border-red-950/30 bg-white px-3 py-2 shadow-2xl"
                       style={{
                         left: tooltipPos.x,
                         top: tooltipPos.y,
-                        transform: 'translate(6px, 6px)',
+                        transform: 'translate(8px, 8px)',
                       }}
                     >
                       <div className="text-sm font-semibold text-[#5b1019]">{nomeEspacoLabel(hoveredId)}</div>
@@ -1670,6 +1695,12 @@ export default function Home() {
                   ) : null}
                 </div>
               </div>
+
+              {isTouchDevice ? (
+                <p className="mt-3 text-xs leading-5 text-red-50/60">
+                  Dica: se o mapa estiver muito aproximado ou deslocado, use o botão <b className="text-white">Reset</b>.
+                </p>
+              ) : null}
             </div>
           </div>
         </div>
@@ -1678,19 +1709,19 @@ export default function Home() {
           <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
             <button className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={closeDetailsModal} aria-label="Fechar" />
 
-            <div className="fixed inset-0 flex items-center justify-center p-4">
-              <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] text-red-50 shadow-2xl">
-                <div className="max-h-[85vh] overflow-y-auto overscroll-contain p-5 sm:p-6">
-                  <div className="mb-5 flex items-start justify-between gap-4">
-                    <div>
+            <div className="fixed inset-0 flex items-end justify-center p-0 sm:items-center sm:p-4">
+              <div className="relative w-full max-w-md overflow-hidden rounded-t-3xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] text-red-50 shadow-2xl sm:rounded-2xl">
+                <div className="max-h-[90svh] overflow-y-auto overscroll-contain p-4 sm:max-h-[85vh] sm:p-6">
+                  <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
                       <h2 className="text-xl font-semibold text-white">Detalhes da reserva</h2>
-                      <p className="mt-1 text-sm text-red-50/75">
+                      <p className="mt-1 text-sm leading-6 text-red-50/75">
                         Data: <b className="text-white">{dataEvento}</b> • Espaço:{' '}
                         <b className="text-white">{detailsReserva.espaco_id}</b>
                       </p>
                     </div>
 
-                    <button onClick={closeDetailsModal} className={PRIMARY_BTN}>
+                    <button onClick={closeDetailsModal} className={`${PRIMARY_BTN} w-full sm:w-auto`}>
                       Fechar
                     </button>
                   </div>
@@ -1761,7 +1792,7 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <div className="text-xs text-red-50/55">
+                    <div className="text-xs leading-5 text-red-50/55">
                       * Em usuário comum, telefone e observação ficam protegidos. No admin você vê tudo.
                     </div>
                   </div>
@@ -1775,22 +1806,25 @@ export default function Home() {
           <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
             <button className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={closeReservaModal} aria-label="Fechar" />
 
-            <div className="fixed inset-0 flex items-center justify-center p-4">
-              <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] text-red-50 shadow-2xl">
-                <div className="max-h-[85vh] overflow-y-auto overscroll-contain p-5 sm:p-6">
-                  <div className="mb-5 flex items-start justify-between gap-4">
-                    <div>
+            <div className="fixed inset-0 flex items-end justify-center p-0 sm:items-center sm:p-4">
+              <div className="relative w-full max-w-md overflow-hidden rounded-t-3xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] text-red-50 shadow-2xl sm:rounded-2xl">
+                <div className="max-h-[90svh] overflow-y-auto overscroll-contain p-4 sm:max-h-[85vh] sm:p-6">
+                  <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
                       <h2 className="text-xl font-semibold text-white">Solicitar reserva</h2>
-                      <p className="mt-1 text-sm text-red-50/75">
+                      <p className="mt-1 text-sm leading-6 text-red-50/75">
                         Data:{' '}
-                        <b className="text-white">{vendaNaHoraAtiva && dataEvento === dataEventoOperacional ? dataEventoOperacional : dataEvento}</b> • Espaço:{' '}
+                        <b className="text-white">
+                          {vendaNaHoraAtiva && dataEvento === dataEventoOperacional ? dataEventoOperacional : dataEvento}
+                        </b>{' '}
+                        • Espaço:{' '}
                         <b className="text-white">
                           {selecionado.nome} ({selecionado.tipo})
                         </b>
                       </p>
                     </div>
 
-                    <button onClick={closeReservaModal} className={PRIMARY_BTN}>
+                    <button onClick={closeReservaModal} className={`${PRIMARY_BTN} w-full sm:w-auto`}>
                       Fechar
                     </button>
                   </div>
@@ -1853,7 +1887,7 @@ export default function Home() {
                             </option>
                           ))}
                         </select>
-                        <p className={`mt-1 text-xs ${MUTED_TEXT}`}>
+                        <p className={`mt-1 text-xs leading-5 ${MUTED_TEXT}`}>
                           Selecione a bebida vinculada à cortesia/aniversário.
                         </p>
                       </div>
@@ -1891,7 +1925,7 @@ export default function Home() {
                           className={INPUT_CLASS}
                           placeholder="Ex: 300.00"
                         />
-                        <p className={`mt-1 text-xs ${MUTED_TEXT}`}>
+                        <p className={`mt-1 text-xs leading-5 ${MUTED_TEXT}`}>
                           Informe apenas o valor já pago antecipadamente.
                         </p>
                       </div>
@@ -1903,7 +1937,7 @@ export default function Home() {
                         value={observacao}
                         onChange={(e) => setObservacao(e.target.value.slice(0, 200))}
                         maxLength={200}
-                        className="mt-1 min-h-[90px] w-full rounded-xl border border-red-950/40 bg-white/95 px-3 py-2 text-neutral-900 outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-700/20"
+                        className="mt-1 min-h-[110px] w-full rounded-xl border border-red-950/40 bg-white/95 px-3 py-3 text-[16px] text-neutral-900 outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-700/20"
                         placeholder="Até 200 caracteres (ou anexe um arquivo)."
                       />
                       <p className={`mt-1 text-xs ${MUTED_TEXT}`}>{observacao.length}/200</p>
@@ -1915,11 +1949,11 @@ export default function Home() {
                         type="file"
                         accept="image/*,application/pdf"
                         onChange={(e) => setAnexoObs(e.target.files?.[0] ?? null)}
-                        className="mt-2 block w-full text-sm text-red-50/80 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:font-semibold file:text-[#5b1019] hover:file:bg-red-50"
+                        className="mt-2 block w-full text-sm text-red-50/80 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-3 file:font-semibold file:text-[#5b1019] hover:file:bg-red-50"
                       />
 
                       {anexoObs ? (
-                        <p className={`mt-2 text-xs ${MUTED_TEXT}`}>
+                        <p className={`mt-2 break-all text-xs leading-5 ${MUTED_TEXT}`}>
                           Arquivo: <b className="text-white">{anexoObs.name}</b>
                         </p>
                       ) : null}
@@ -1928,7 +1962,7 @@ export default function Home() {
                     <button
                       type="submit"
                       disabled={saving}
-                      className={`w-full rounded-xl py-2 font-semibold transition ${
+                      className={`inline-flex min-h-[48px] w-full items-center justify-center rounded-xl px-4 py-3 text-base font-semibold transition ${
                         saving ? 'bg-white/20 text-red-50/50' : 'bg-white text-[#5b1019] hover:bg-red-50'
                       }`}
                     >
