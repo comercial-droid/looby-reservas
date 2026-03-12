@@ -295,51 +295,6 @@ export default function Home() {
     return OPCOES_BEBIDA_CORTESIA_FALLBACK
   }, [configBebidas])
 
-  const modeloPrecoSelecionado = useMemo(() => {
-    const lista = isCamarote ? precosCamarote : precosMesa
-    return lista.find((item) => item.nome_modelo === modeloPreco) ?? null
-  }, [isCamarote, precosCamarote, precosMesa, modeloPreco])
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setNow(new Date())
-    }, 30_000)
-
-    return () => window.clearInterval(timer)
-  }, [])
-
-  useEffect(() => {
-    if (vendaNaHoraAtiva) {
-      setDataEvento(dataEventoOperacional)
-    }
-  }, [vendaNaHoraAtiva, dataEventoOperacional])
-
-  useEffect(() => {
-    if (vendaNaHoraAtiva && dataEvento === dataEventoOperacional) {
-      setTipoReserva('NA_HORA')
-      return
-    }
-
-    if (tipoReserva === 'NA_HORA' && dataEvento !== dataEventoOperacional) {
-      setTipoReserva('VENDA')
-    }
-  }, [vendaNaHoraAtiva, dataEvento, dataEventoOperacional, tipoReserva])
-
-  useEffect(() => {
-    if (typeof document === 'undefined') return
-
-    const algumModalAberto = modalOpen || detailsOpen
-    const originalOverflow = document.body.style.overflow
-
-    if (algumModalAberto) {
-      document.body.style.overflow = 'hidden'
-    }
-
-    return () => {
-      document.body.style.overflow = originalOverflow
-    }
-  }, [modalOpen, detailsOpen])
-
   const VALID_IDS = useMemo(() => {
     const mesas = [
       'vip-125',
@@ -433,6 +388,12 @@ export default function Home() {
   }, [selecionadoId])
 
   const isCamarote = selecionado?.tipo === 'CAMAROTE'
+
+  const modeloPrecoSelecionado = useMemo(() => {
+    const lista = isCamarote ? precosCamarote : precosMesa
+    return lista.find((item) => item.nome_modelo === modeloPreco) ?? null
+  }, [isCamarote, precosCamarote, precosMesa, modeloPreco])
+
   const tipoFinanceiro = tipoReserva === 'VENDA' || tipoReserva === 'NA_HORA'
   const modeloPrecoObrigatorio = tipoFinanceiro
   const valorSinalObrigatorio = tipoFinanceiro
@@ -505,6 +466,46 @@ export default function Home() {
       active = false
     }
   }, [router])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(new Date())
+    }, 30_000)
+
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    if (vendaNaHoraAtiva) {
+      setDataEvento(dataEventoOperacional)
+    }
+  }, [vendaNaHoraAtiva, dataEventoOperacional])
+
+  useEffect(() => {
+    if (vendaNaHoraAtiva && dataEvento === dataEventoOperacional) {
+      setTipoReserva('NA_HORA')
+      return
+    }
+
+    if (tipoReserva === 'NA_HORA' && dataEvento !== dataEventoOperacional) {
+      setTipoReserva('VENDA')
+    }
+  }, [vendaNaHoraAtiva, dataEvento, dataEventoOperacional, tipoReserva])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+
+    const algumModalAberto = modalOpen || detailsOpen
+    const originalOverflow = document.body.style.overflow
+
+    if (algumModalAberto) {
+      document.body.style.overflow = 'hidden'
+    }
+
+    return () => {
+      document.body.style.overflow = originalOverflow
+    }
+  }, [modalOpen, detailsOpen])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
