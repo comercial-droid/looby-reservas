@@ -17,6 +17,7 @@ type ReservaRow = {
   modelo_preco?: string | null
   valor_espaco?: number | null
   valor_sinal?: number | null
+  bebida_cortesia?: string | null
   nome: string
   telefone: string
   tipo: string
@@ -156,6 +157,14 @@ const PRECOS_MESA = [
   'Mesa vip 700/570 consumação',
 ]
 
+const OPCOES_BEBIDA_CORTESIA = [
+  'sem bebida',
+  'Combão',
+  'vodka',
+  'gin',
+  'espumante',
+]
+
 const RED_CARD =
   'rounded-2xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.28)]'
 const RED_CARD_LIGHT =
@@ -192,6 +201,7 @@ export default function Home() {
   const [modeloPreco, setModeloPreco] = useState('')
   const [valorEspaco, setValorEspaco] = useState('')
   const [valorSinal, setValorSinal] = useState('')
+  const [bebidaCortesia, setBebidaCortesia] = useState<string>('sem bebida')
   const [observacao, setObservacao] = useState('')
   const [anexoObs, setAnexoObs] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
@@ -222,11 +232,16 @@ export default function Home() {
 
   const vendaNaHoraAtiva = useMemo(() => isJanelaVendaNaHora(now), [now])
   const dataEventoOperacional = useMemo(() => getDataEventoOperacional(now), [now])
+  const vendaAntecipadaLiberada = useMemo(() => {
+    return !(vendaNaHoraAtiva && dataEvento === dataEventoOperacional)
+  }, [vendaNaHoraAtiva, dataEvento, dataEventoOperacional])
 
   const isReadOnlyHistorico = useMemo(() => {
     if (vendaNaHoraAtiva && dataEvento === dataEventoOperacional) return false
     return isPastDateISO(dataEvento)
   }, [dataEvento, vendaNaHoraAtiva, dataEventoOperacional])
+
+  const mostrarCampoBebida = tipoReserva === 'ANIVERSARIO' || tipoReserva === 'CORTESIA'
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -243,10 +258,15 @@ export default function Home() {
   }, [vendaNaHoraAtiva, dataEventoOperacional])
 
   useEffect(() => {
-    if (vendaNaHoraAtiva) {
+    if (vendaNaHoraAtiva && dataEvento === dataEventoOperacional) {
       setTipoReserva('NA_HORA')
+      return
     }
-  }, [vendaNaHoraAtiva])
+
+    if (tipoReserva === 'NA_HORA' && dataEvento !== dataEventoOperacional) {
+      setTipoReserva('VENDA')
+    }
+  }, [vendaNaHoraAtiva, dataEvento, dataEventoOperacional, tipoReserva])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -899,6 +919,7 @@ export default function Home() {
     setModeloPreco('')
     setValorEspaco('')
     setValorSinal('')
+    setBebidaCortesia('sem bebida')
     setObservacao('')
     setAnexoObs(null)
     setModalOpen(true)
@@ -1000,9 +1021,15 @@ export default function Home() {
       return
     }
 
-    const tipoFinal: ReservaTipo = vendaNaHoraAtiva ? 'NA_HORA' : tipoReserva
-    const dataEventoFinal = vendaNaHoraAtiva ? dataEventoOperacional : dataEvento
+    const tipoFinal: ReservaTipo =
+      vendaNaHoraAtiva && dataEvento === dataEventoOperacional ? 'NA_HORA' : tipoReserva
+
+    const dataEventoFinal =
+      vendaNaHoraAtiva && dataEvento === dataEventoOperacional ? dataEventoOperacional : dataEvento
+
     const tipoFinanceiroFinal = tipoFinal === 'VENDA' || tipoFinal === 'NA_HORA'
+    const bebidaFinal =
+      tipoFinal === 'ANIVERSARIO' || tipoFinal === 'CORTESIA' ? bebidaCortesia : null
 
     if (!nomeCompleto.trim()) {
       alert('Preencha o nome completo.')
@@ -1017,6 +1044,11 @@ export default function Home() {
 
     if (tipoFinanceiroFinal && !modeloPreco) {
       alert('Selecione o modelo de preço.')
+      return
+    }
+
+    if (!tipoFinanceiroFinal && !bebidaFinal) {
+      alert('Selecione a bebida.')
       return
     }
 
@@ -1130,6 +1162,7 @@ export default function Home() {
         modelo_preco: tipoFinanceiroFinal ? modeloPreco : null,
         valor_espaco: tipoFinanceiroFinal ? valorEspacoNumber : null,
         valor_sinal: tipoFinanceiroFinal ? valorSinalNumber : null,
+        bebida_cortesia: bebidaFinal,
         status: 'pendente',
         observacao: observacao.trim(),
         comprovante_url: uploadedPath,
@@ -1603,7 +1636,14 @@ export default function Home() {
                             </span>
                           </div>
                         </>
-                      ) : null}
+                      ) : (
+                        <div className="flex justify-between gap-3">
+                          <span className="text-red-50/60">Bebida</span>
+                          <span className="text-right text-white">
+                            {detailsReserva.bebida_cortesia || '—'}
+                          </span>
+                        </div>
+                      )}
 
                       <div className="pt-2">
                         <div className="mb-1 text-red-50/60">Observação</div>
@@ -1639,7 +1679,7 @@ export default function Home() {
                       <h2 className="text-xl font-semibold text-white">Solicitar reserva</h2>
                       <p className="mt-1 text-sm text-red-50/75">
                         Data:{' '}
-                        <b className="text-white">{vendaNaHoraAtiva ? dataEventoOperacional : dataEvento}</b> • Espaço:{' '}
+                        <b className="text-white">{vendaNaHoraAtiva && dataEvento === dataEventoOperacional ? dataEventoOperacional : dataEvento}</b> • Espaço:{' '}
                         <b className="text-white">
                           {selecionado.nome} ({selecionado.tipo})
                         </b>
@@ -1651,7 +1691,7 @@ export default function Home() {
                     </button>
                   </div>
 
-                  {vendaNaHoraAtiva ? (
+                  {vendaNaHoraAtiva && dataEvento === dataEventoOperacional ? (
                     <div className="mb-4 rounded-xl border border-sky-300/25 bg-sky-400/10 p-3 text-sm text-sky-100">
                       Esta solicitação será registrada como <b>venda na hora</b> para o evento de{' '}
                       <b>{dataEventoOperacional}</b>.
@@ -1681,24 +1721,39 @@ export default function Home() {
                       <label className={LABEL_CLASS}>Tipo</label>
                       <select
                         value={tipoReserva}
-                        onChange={(e) => {
-                          if (vendaNaHoraAtiva) return
-                          setTipoReserva(e.target.value as ReservaTipo)
-                        }}
-                        disabled={vendaNaHoraAtiva}
-                        className={`${INPUT_CLASS} ${vendaNaHoraAtiva ? 'cursor-not-allowed opacity-70' : ''}`}
+                        onChange={(e) => setTipoReserva(e.target.value as ReservaTipo)}
+                        className={INPUT_CLASS}
                       >
-                        {vendaNaHoraAtiva ? (
+                        <option value="ANIVERSARIO">Aniversário</option>
+                        <option value="CORTESIA">Cortesia</option>
+                        <option value="VENDA" disabled={!vendaAntecipadaLiberada}>
+                          Venda antecipada
+                        </option>
+                        {vendaNaHoraAtiva && dataEvento === dataEventoOperacional ? (
                           <option value="NA_HORA">Venda na hora</option>
-                        ) : (
-                          <>
-                            <option value="ANIVERSARIO">Aniversário</option>
-                            <option value="CORTESIA">Cortesia</option>
-                            <option value="VENDA">Venda antecipada</option>
-                          </>
-                        )}
+                        ) : null}
                       </select>
                     </div>
+
+                    {mostrarCampoBebida ? (
+                      <div>
+                        <label className={LABEL_CLASS}>Bebida</label>
+                        <select
+                          value={bebidaCortesia}
+                          onChange={(e) => setBebidaCortesia(e.target.value)}
+                          className={INPUT_CLASS}
+                        >
+                          {OPCOES_BEBIDA_CORTESIA.map((opcao) => (
+                            <option key={opcao} value={opcao}>
+                              {opcao}
+                            </option>
+                          ))}
+                        </select>
+                        <p className={`mt-1 text-xs ${MUTED_TEXT}`}>
+                          Selecione a bebida vinculada à cortesia/aniversário.
+                        </p>
+                      </div>
+                    ) : null}
 
                     {modeloPrecoObrigatorio ? (
                       <div>

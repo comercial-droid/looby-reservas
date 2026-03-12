@@ -22,6 +22,7 @@ type ReservaRow = {
   modelo_preco?: string | null
   valor_espaco?: number | null
   valor_sinal?: number | null
+  bebida_cortesia?: string | null
   nome: string
   telefone: string
   tipo: Tipo
@@ -48,7 +49,24 @@ type ReservaLogRow = {
   detalhes: any
   created_at: string
 }
+type ConfigBebidaRow = {
+  id: number
+  nome: string
+  ativo: boolean
+  ordem: number
+  created_at?: string
+}
 
+type ConfigPrecoRow = {
+  id: number
+  tipo_espaco: 'MESA' | 'CAMAROTE' | string
+  nome_modelo: string
+  valor_total: number
+  valor_consumacao: number
+  ativo: boolean
+  ordem: number
+  created_at?: string
+}
 function todayISO() {
   const d = new Date()
   const yyyy = d.getFullYear()
@@ -83,9 +101,16 @@ function isAprovadoVenda(status: Status) {
 function isAprovadoNaHora(status: Status) {
   return normLower(status) === 'aprovado_na_hora'
 }
+function isAprovadoCortesia(status: Status) {
+  return normLower(status) === 'aprovado_cortesia'
+}
 function isTipoFinanceiro(tipo: Tipo) {
   const t = normLower(tipo)
   return t === 'venda' || t === 'na_hora'
+}
+function isTipoBebida(tipo: Tipo) {
+  const t = normLower(tipo)
+  return t === 'cortesia' || t === 'aniversario'
 }
 
 function isCamarote(espacoId: string) {
@@ -310,7 +335,6 @@ function downloadCsv(filename: string, headers: string[], rows: (string | number
   URL.revokeObjectURL(url)
 }
 
-/** WhatsApp */
 function toBRPhoneE164(phoneRaw: string) {
   const d = onlyDigits(phoneRaw)
   if (!d) return ''
@@ -449,6 +473,7 @@ function ReservationCard({
   const temValorEspaco = Number(r.valor_espaco ?? 0) > 0
   const faltaReceber = valorFaltaReceber(r)
   const mostrarFinanceiro = isTipoFinanceiro(r.tipo)
+  const bebidaText = String(r.bebida_cortesia ?? '').trim()
 
   return (
     <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
@@ -469,6 +494,7 @@ function ReservationCard({
           <div className="mt-3 flex flex-wrap gap-2">
             <Pill tone="blue">{labelTipo(r.tipo)}</Pill>
             {modeloPrecoText ? <Pill tone="blue">Modelo: {modeloPrecoText}</Pill> : null}
+            {bebidaText ? <Pill tone="orange">Bebida: {bebidaText}</Pill> : null}
             {temValorEspaco ? <Pill tone="blue">Valor: {formatCurrencyBR(r.valor_espaco)}</Pill> : null}
             {temValorSinal ? <Pill tone="green">Sinal: {formatCurrencyBR(r.valor_sinal)}</Pill> : null}
             {mostrarFinanceiro && (isAprovadoVenda(r.status) || isAprovadoNaHora(r.status)) ? (
@@ -480,8 +506,15 @@ function ReservationCard({
             {r.created_at ? <Pill tone="yellow">Pedido: {formatarDataHora(r.created_at)}</Pill> : null}
           </div>
 
-          {!compact && (hasObsText || hasFile || temValorSinal || temValorEspaco) ? (
+          {!compact && (hasObsText || hasFile || temValorSinal || temValorEspaco || bebidaText) ? (
             <div className="mt-3 space-y-2">
+              {bebidaText ? (
+                <div className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2">
+                  <div className="text-xs text-orange-700">Bebida destinada</div>
+                  <div className="mt-1 text-sm font-semibold text-orange-900">{bebidaText}</div>
+                </div>
+              ) : null}
+
               {temValorEspaco ? (
                 <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2">
                   <div className="text-xs text-blue-700">Valor da mesa/camarote</div>
@@ -603,8 +636,9 @@ function ReservationCard({
 export default function AdminPage() {
   const router = useRouter()
 
-  const [mainTab, setMainTab] = useState<'pendentes' | 'relatorios' | 'financeiro'>('pendentes')
-  const [relatorioStatus, setRelatorioStatus] = useState<'todas' | 'pendentes' | 'aprovadas' | 'canceladas'>('todas')
+  const [mainTab, setMainTab] = useState<'pendentes' | 'historico' | 'financeiro' | 'configuracoes'>('pendentes')
+  const [financeTab, setFinanceTab] = useState<'cobranca' | 'bebidas'>('cobranca')
+  const [historicoStatus, setHistoricoStatus] = useState<'todas' | 'pendentes' | 'aprovadas' | 'canceladas'>('todas')
 
   const [reservas, setReservas] = useState<ReservaRow[]>([])
   const [pendentesGlobais, setPendentesGlobais] = useState<ReservaRow[]>([])
@@ -642,7 +676,17 @@ export default function AdminPage() {
   const [reservaSelecionada, setReservaSelecionada] = useState<ReservaRow | null>(null)
   const [logsReserva, setLogsReserva] = useState<ReservaLogRow[]>([])
   const [loadingLogs, setLoadingLogs] = useState(false)
+     const [configBebidas, setConfigBebidas] = useState<ConfigBebidaRow[]>([])
+const [configPrecos, setConfigPrecos] = useState<ConfigPrecoRow[]>([])
 
+const [novaBebidaNome, setNovaBebidaNome] = useState('')
+const [novaBebidaOrdem, setNovaBebidaOrdem] = useState('')
+
+const [novoPrecoTipoEspaco, setNovoPrecoTipoEspaco] = useState<'MESA' | 'CAMAROTE'>('CAMAROTE')
+const [novoPrecoNomeModelo, setNovoPrecoNomeModelo] = useState('')
+const [novoPrecoValorTotal, setNovoPrecoValorTotal] = useState('')
+const [novoPrecoValorConsumacao, setNovoPrecoValorConsumacao] = useState('')
+const [novoPrecoOrdem, setNovoPrecoOrdem] = useState('')
   const [editMode, setEditMode] = useState(false)
   const [editNome, setEditNome] = useState('')
   const [editTelefone, setEditTelefone] = useState('')
@@ -700,7 +744,224 @@ export default function AdminPage() {
     }
     setProfiles((data ?? []) as ProfileRow[])
   }
+async function fetchConfigBebidas() {
+  const { data, error } = await supabase
+    .from('config_bebidas')
+    .select('*')
+    .order('ordem', { ascending: true })
+    .order('nome', { ascending: true })
 
+  if (error) {
+    console.error('Erro ao buscar config_bebidas:', error)
+    setErroUi(`Erro ao buscar bebidas: ${error.message}`)
+    return
+  }
+
+  setConfigBebidas((data ?? []) as ConfigBebidaRow[])
+}
+
+async function fetchConfigPrecos() {
+  const { data, error } = await supabase
+    .from('config_precos_reserva')
+    .select('*')
+    .order('ordem', { ascending: true })
+    .order('nome_modelo', { ascending: true })
+
+  if (error) {
+    console.error('Erro ao buscar config_precos_reserva:', error)
+    setErroUi(`Erro ao buscar preços: ${error.message}`)
+    return
+  }
+
+  setConfigPrecos((data ?? []) as ConfigPrecoRow[])
+}
+
+async function criarBebida() {
+  const nome = novaBebidaNome.trim()
+  const ordem = novaBebidaOrdem.trim() === '' ? 0 : Number(novaBebidaOrdem)
+
+  if (!nome) {
+    alert('Informe o nome da bebida.')
+    return
+  }
+
+  if (!Number.isFinite(ordem) || ordem < 0) {
+    alert('Informe uma ordem válida.')
+    return
+  }
+
+  const { error } = await supabase.from('config_bebidas').insert({
+    nome,
+    ordem,
+    ativo: true,
+  })
+
+  if (error) {
+    console.error(error)
+    alert(`Erro ao criar bebida: ${error.message}`)
+    return
+  }
+
+  setNovaBebidaNome('')
+  setNovaBebidaOrdem('')
+  await fetchConfigBebidas()
+}
+
+async function toggleBebidaAtiva(row: ConfigBebidaRow) {
+  const { error } = await supabase
+    .from('config_bebidas')
+    .update({ ativo: !row.ativo })
+    .eq('id', row.id)
+
+  if (error) {
+    console.error(error)
+    alert(`Erro ao atualizar bebida: ${error.message}`)
+    return
+  }
+
+  await fetchConfigBebidas()
+}
+
+async function salvarBebida(row: ConfigBebidaRow) {
+  const nome = String(row.nome ?? '').trim()
+  const ordem = Number(row.ordem ?? 0)
+
+  if (!nome) {
+    alert('Nome da bebida inválido.')
+    return
+  }
+
+  if (!Number.isFinite(ordem) || ordem < 0) {
+    alert('Ordem inválida.')
+    return
+  }
+
+  const { error } = await supabase
+    .from('config_bebidas')
+    .update({
+      nome,
+      ordem,
+    })
+    .eq('id', row.id)
+
+  if (error) {
+    console.error(error)
+    alert(`Erro ao salvar bebida: ${error.message}`)
+    return
+  }
+
+  await fetchConfigBebidas()
+}
+
+async function criarPreco() {
+  const nome_modelo = novoPrecoNomeModelo.trim()
+  const valor_total = Number(novoPrecoValorTotal.replace(',', '.'))
+  const valor_consumacao = Number(novoPrecoValorConsumacao.replace(',', '.'))
+  const ordem = novoPrecoOrdem.trim() === '' ? 0 : Number(novoPrecoOrdem)
+
+  if (!nome_modelo) {
+    alert('Informe o nome do modelo.')
+    return
+  }
+
+  if (!Number.isFinite(valor_total) || valor_total <= 0) {
+    alert('Informe um valor total válido.')
+    return
+  }
+
+  if (!Number.isFinite(valor_consumacao) || valor_consumacao < 0) {
+    alert('Informe uma consumação válida.')
+    return
+  }
+
+  if (!Number.isFinite(ordem) || ordem < 0) {
+    alert('Informe uma ordem válida.')
+    return
+  }
+
+  const { error } = await supabase.from('config_precos_reserva').insert({
+    tipo_espaco: novoPrecoTipoEspaco,
+    nome_modelo,
+    valor_total,
+    valor_consumacao,
+    ordem,
+    ativo: true,
+  })
+
+  if (error) {
+    console.error(error)
+    alert(`Erro ao criar preço: ${error.message}`)
+    return
+  }
+
+  setNovoPrecoTipoEspaco('CAMAROTE')
+  setNovoPrecoNomeModelo('')
+  setNovoPrecoValorTotal('')
+  setNovoPrecoValorConsumacao('')
+  setNovoPrecoOrdem('')
+  await fetchConfigPrecos()
+}
+
+async function togglePrecoAtivo(row: ConfigPrecoRow) {
+  const { error } = await supabase
+    .from('config_precos_reserva')
+    .update({ ativo: !row.ativo })
+    .eq('id', row.id)
+
+  if (error) {
+    console.error(error)
+    alert(`Erro ao atualizar preço: ${error.message}`)
+    return
+  }
+
+  await fetchConfigPrecos()
+}
+
+async function salvarPreco(row: ConfigPrecoRow) {
+  const nome_modelo = String(row.nome_modelo ?? '').trim()
+  const valor_total = Number(row.valor_total ?? 0)
+  const valor_consumacao = Number(row.valor_consumacao ?? 0)
+  const ordem = Number(row.ordem ?? 0)
+
+  if (!nome_modelo) {
+    alert('Nome do modelo inválido.')
+    return
+  }
+
+  if (!Number.isFinite(valor_total) || valor_total <= 0) {
+    alert('Valor total inválido.')
+    return
+  }
+
+  if (!Number.isFinite(valor_consumacao) || valor_consumacao < 0) {
+    alert('Valor de consumação inválido.')
+    return
+  }
+
+  if (!Number.isFinite(ordem) || ordem < 0) {
+    alert('Ordem inválida.')
+    return
+  }
+
+  const { error } = await supabase
+    .from('config_precos_reserva')
+    .update({
+      tipo_espaco: row.tipo_espaco,
+      nome_modelo,
+      valor_total,
+      valor_consumacao,
+      ordem,
+    })
+    .eq('id', row.id)
+
+  if (error) {
+    console.error(error)
+    alert(`Erro ao salvar preço: ${error.message}`)
+    return
+  }
+
+  await fetchConfigPrecos()
+}
   function applyTipoToQuery(q: any) {
     if (tipoFiltro === 'todas') return q
     return q.eq('tipo', tipoFiltro)
@@ -831,11 +1092,13 @@ export default function AdminPage() {
     setAddSinalValor('')
   }
 
-  useEffect(() => {
-    if (authChecking) return
-    fetchProfiles()
-    fetchReservas()
-  }, [authChecking])
+ useEffect(() => {
+  if (authChecking) return
+  fetchProfiles()
+  fetchReservas()
+  fetchConfigBebidas()
+  fetchConfigPrecos()
+}, [authChecking])
 
   useEffect(() => {
     if (authChecking) return
@@ -1104,8 +1367,11 @@ export default function AdminPage() {
       (r) => normLower(r.status) === 'aprovado_venda' || normLower(r.status) === 'aprovado_na_hora'
     )
 
-    const totalSinal = reservasFinanceirasAprovadas.reduce((acc, r) => acc + Number(r.valor_sinal ?? 0), 0)
+    const reservasBebidasAprovadas = reservas.filter(
+      (r) => normLower(r.status) === 'aprovado_cortesia' && isTipoBebida(r.tipo)
+    )
 
+    const totalSinal = reservasFinanceirasAprovadas.reduce((acc, r) => acc + Number(r.valor_sinal ?? 0), 0)
     const totalFaltaReceber = reservasFinanceirasAprovadas.reduce((acc, r) => acc + valorFaltaReceber(r), 0)
 
     const porEventoMap = new Map<
@@ -1161,6 +1427,19 @@ export default function AdminPage() {
       return 1
     })
 
+    const bebidasCortesia = [...reservasBebidasAprovadas].sort((a, b) => {
+      const dateCmp = String(a.data_evento).localeCompare(String(b.data_evento))
+      if (dateCmp !== 0) return dateCmp
+
+      const aMesa = isMesa(a.espaco_id)
+      const bMesa = isMesa(b.espaco_id)
+
+      if (aMesa && bMesa) return ordenarMesas(a, b)
+      if (!aMesa && !bMesa) return ordenarCamarotes(a, b)
+      if (!aMesa && bMesa) return -1
+      return 1
+    })
+
     return {
       pendentesPeriodo,
       aprovadas,
@@ -1174,10 +1453,12 @@ export default function AdminPage() {
       reservasVenda,
       reservasNaHora,
       reservasFinanceirasAprovadas,
+      reservasBebidasAprovadas,
       pendentesFila,
       pendentesFilaMesas,
       pendentesFilaCamarotes,
       cobrancaRecepcao,
+      bebidasCortesia,
     }
   }, [reservas, pendentesGlobais])
 
@@ -1210,12 +1491,12 @@ export default function AdminPage() {
       .sort((a, b) => b.count - a.count)
   }, [reservas, profileNameById])
 
-  const listaRelatorio = useMemo(() => {
-    if (relatorioStatus === 'todas') return reservas
-    if (relatorioStatus === 'pendentes') return reservas.filter((r) => isPendente(r.status))
-    if (relatorioStatus === 'aprovadas') return reservas.filter((r) => isAprovado(r.status))
+  const listaHistorico = useMemo(() => {
+    if (historicoStatus === 'todas') return reservas
+    if (historicoStatus === 'pendentes') return reservas.filter((r) => isPendente(r.status))
+    if (historicoStatus === 'aprovadas') return reservas.filter((r) => isAprovado(r.status))
     return reservas.filter((r) => isCancelado(r.status))
-  }, [reservas, relatorioStatus])
+  }, [reservas, historicoStatus])
 
   function exportarRelatorioCobranca() {
     if (computed.cobrancaRecepcao.length === 0) {
@@ -1255,14 +1536,40 @@ export default function AdminPage() {
     )
   }
 
+  function exportarRelatorioBebidas() {
+    if (computed.bebidasCortesia.length === 0) {
+      alert('Não há bebidas de cortesia/aniversário para exportar no período selecionado.')
+      return
+    }
+
+    const rows = computed.bebidasCortesia.map((r) => [
+      formatBRDate(r.data_evento),
+      displayEspacoCompleto(r.espaco_id),
+      r.nome,
+      labelTipo(r.tipo),
+      String(r.bebida_cortesia ?? ''),
+    ])
+
+    const filename =
+      dataInicial && dataFinal && dataInicial === dataFinal
+        ? `relatorio-bebidas-${dataInicial}.csv`
+        : `relatorio-bebidas-${dataInicial || 'inicio'}-${dataFinal || 'fim'}.csv`
+
+    downloadCsv(
+      filename,
+      ['Data do evento', 'Espaço', 'Nome do cliente', 'Tipo', 'Bebida destinada'],
+      rows
+    )
+  }
+
   if (authChecking) {
     return <div className="min-h-screen bg-neutral-50 p-8 text-neutral-700">Verificando permissão…</div>
   }
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900">
-      <div className="sticky top-0 z-40 border-b border-neutral-200 bg-white/85 backdrop-blur">
-        <div className="mx-auto max-w-6xl px-6 py-5">
+      <div className="border-b border-neutral-200 bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Admin — Looby Reservas</h1>
@@ -1286,6 +1593,14 @@ export default function AdminPage() {
               >
                 Atualizar
               </button>
+              <button
+  onClick={() => setMainTab('configuracoes')}
+  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+    mainTab === 'configuracoes' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+  }`}
+>
+  Configurações
+</button>
               <button onClick={handleLogout} className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800">
                 Sair
               </button>
@@ -1303,12 +1618,12 @@ export default function AdminPage() {
             </button>
 
             <button
-              onClick={() => setMainTab('relatorios')}
+              onClick={() => setMainTab('historico')}
               className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                mainTab === 'relatorios' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                mainTab === 'historico' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
               }`}
             >
-              Relatórios
+              Histórico
             </button>
 
             <button
@@ -1399,7 +1714,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
         {loading ? (
           <div className="rounded-3xl border border-neutral-200 bg-white p-10 text-neutral-600 shadow-sm">Carregando…</div>
         ) : (
@@ -1422,7 +1737,7 @@ export default function AdminPage() {
                   ) : (
                     computed.pendentesFila.map((r, index) => (
                       <div key={String(r.id)} className="rounded-3xl border border-yellow-200 bg-yellow-50/60 p-3">
-                        <div className="mb-3 flex items-center justify-between gap-3">
+                        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex items-center gap-2">
                             <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-neutral-900 px-2 text-xs font-bold text-white">
                               {index + 1}
@@ -1450,10 +1765,308 @@ export default function AdminPage() {
                 </div>
               </Section>
             ) : null}
+{mainTab === 'configuracoes' ? (
+  <>
+    <Section title="Configuração de bebidas" subtitle="Gerencie as opções de bebida para cortesia e aniversário.">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[380px_minmax(0,1fr)]">
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+          <h3 className="font-semibold text-neutral-900">Nova bebida</h3>
 
-            {mainTab === 'relatorios' ? (
+          <div className="mt-4 space-y-3">
+            <div>
+              <label className="text-xs text-neutral-500">Nome</label>
+              <input
+                value={novaBebidaNome}
+                onChange={(e) => setNovaBebidaNome(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                placeholder="Ex: whisky"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-neutral-500">Ordem</label>
+              <input
+                type="number"
+                min="0"
+                value={novaBebidaOrdem}
+                onChange={(e) => setNovaBebidaOrdem(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                placeholder="Ex: 6"
+              />
+            </div>
+
+            <button
+              onClick={criarBebida}
+              className="w-full rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+            >
+              Adicionar bebida
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {configBebidas.length === 0 ? (
+            <EmptyState text="Nenhuma bebida cadastrada." />
+          ) : (
+            configBebidas.map((row) => (
+              <div key={row.id} className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_120px_140px_auto_auto] md:items-end">
+                  <div>
+                    <label className="text-xs text-neutral-500">Nome</label>
+                    <input
+                      value={row.nome}
+                      onChange={(e) =>
+                        setConfigBebidas((prev) =>
+                          prev.map((item) => (item.id === row.id ? { ...item, nome: e.target.value } : item))
+                        )
+                      }
+                      className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-neutral-500">Ordem</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={row.ordem}
+                      onChange={(e) =>
+                        setConfigBebidas((prev) =>
+                          prev.map((item) =>
+                            item.id === row.id ? { ...item, ordem: Number(e.target.value || 0) } : item
+                          )
+                        )
+                      }
+                      className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-neutral-500">Status</label>
+                    <div className="mt-2">
+                      <Pill tone={row.ativo ? 'green' : 'red'}>{row.ativo ? 'ATIVA' : 'INATIVA'}</Pill>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => salvarBebida(row)}
+                    className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                  >
+                    Salvar
+                  </button>
+
+                  <button
+                    onClick={() => toggleBebidaAtiva(row)}
+                    className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${
+                      row.ativo ? 'bg-red-600 hover:bg-red-500' : 'bg-emerald-600 hover:bg-emerald-500'
+                    }`}
+                  >
+                    {row.ativo ? 'Desativar' : 'Ativar'}
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </Section>
+
+    <Section title="Configuração de preços e consumação" subtitle="Gerencie modelos de mesa e camarote sem alterar o código.">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[420px_minmax(0,1fr)]">
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+          <h3 className="font-semibold text-neutral-900">Novo modelo</h3>
+
+          <div className="mt-4 space-y-3">
+            <div>
+              <label className="text-xs text-neutral-500">Tipo do espaço</label>
+              <select
+                value={novoPrecoTipoEspaco}
+                onChange={(e) => setNovoPrecoTipoEspaco(e.target.value as 'MESA' | 'CAMAROTE')}
+                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+              >
+                <option value="CAMAROTE">CAMAROTE</option>
+                <option value="MESA">MESA</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs text-neutral-500">Nome do modelo</label>
+              <input
+                value={novoPrecoNomeModelo}
+                onChange={(e) => setNovoPrecoNomeModelo(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                placeholder="Ex: Camarote 5000/3000 consumação"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-xs text-neutral-500">Valor total</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={novoPrecoValorTotal}
+                  onChange={(e) => setNovoPrecoValorTotal(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-neutral-500">Consumação</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={novoPrecoValorConsumacao}
+                  onChange={(e) => setNovoPrecoValorConsumacao(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-neutral-500">Ordem</label>
+              <input
+                type="number"
+                min="0"
+                value={novoPrecoOrdem}
+                onChange={(e) => setNovoPrecoOrdem(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+              />
+            </div>
+
+            <button
+              onClick={criarPreco}
+              className="w-full rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+            >
+              Adicionar modelo
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {configPrecos.length === 0 ? (
+            <EmptyState text="Nenhum modelo de preço cadastrado." />
+          ) : (
+            configPrecos.map((row) => (
+              <div key={row.id} className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-6 md:items-end">
+                  <div>
+                    <label className="text-xs text-neutral-500">Tipo</label>
+                    <select
+                      value={row.tipo_espaco}
+                      onChange={(e) =>
+                        setConfigPrecos((prev) =>
+                          prev.map((item) => (item.id === row.id ? { ...item, tipo_espaco: e.target.value } : item))
+                        )
+                      }
+                      className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                    >
+                      <option value="CAMAROTE">CAMAROTE</option>
+                      <option value="MESA">MESA</option>
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="text-xs text-neutral-500">Modelo</label>
+                    <input
+                      value={row.nome_modelo}
+                      onChange={(e) =>
+                        setConfigPrecos((prev) =>
+                          prev.map((item) => (item.id === row.id ? { ...item, nome_modelo: e.target.value } : item))
+                        )
+                      }
+                      className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-neutral-500">Valor</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={row.valor_total}
+                      onChange={(e) =>
+                        setConfigPrecos((prev) =>
+                          prev.map((item) =>
+                            item.id === row.id ? { ...item, valor_total: Number(e.target.value || 0) } : item
+                          )
+                        )
+                      }
+                      className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-neutral-500">Consumação</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={row.valor_consumacao}
+                      onChange={(e) =>
+                        setConfigPrecos((prev) =>
+                          prev.map((item) =>
+                            item.id === row.id ? { ...item, valor_consumacao: Number(e.target.value || 0) } : item
+                          )
+                        )
+                      }
+                      className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-neutral-500">Ordem</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={row.ordem}
+                      onChange={(e) =>
+                        setConfigPrecos((prev) =>
+                          prev.map((item) =>
+                            item.id === row.id ? { ...item, ordem: Number(e.target.value || 0) } : item
+                          )
+                        )
+                      }
+                      className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  <Pill tone={row.ativo ? 'green' : 'red'}>{row.ativo ? 'ATIVO' : 'INATIVO'}</Pill>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => salvarPreco(row)}
+                      className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                    >
+                      Salvar
+                    </button>
+
+                    <button
+                      onClick={() => togglePrecoAtivo(row)}
+                      className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${
+                        row.ativo ? 'bg-red-600 hover:bg-red-500' : 'bg-emerald-600 hover:bg-emerald-500'
+                      }`}
+                    >
+                      {row.ativo ? 'Desativar' : 'Ativar'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </Section>
+  </>
+) : null}
+            {mainTab === 'historico' ? (
               <>
-                <Section title={`Relatórios — ${periodoLabel}`} subtitle="Resumo operacional do período conforme filtros aplicados.">
+                <Section title={`Histórico — ${periodoLabel}`} subtitle="Resumo operacional do período conforme filtros aplicados.">
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-7">
                     <StatCard title="Reservas" value={totalPeriodo} />
                     <StatCard title="Pendentes" value={computed.pendentesPeriodo.length} />
@@ -1517,8 +2130,8 @@ export default function AdminPage() {
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-neutral-900">Filtro da lista</h3>
                         <select
-                          value={relatorioStatus}
-                          onChange={(e) => setRelatorioStatus(e.target.value as any)}
+                          value={historicoStatus}
+                          onChange={(e) => setHistoricoStatus(e.target.value as any)}
                           className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400"
                         >
                           <option value="todas">Todas</option>
@@ -1535,10 +2148,10 @@ export default function AdminPage() {
 
                 <Section title="Lista de reservas" subtitle={`Visualização limpa das reservas de ${periodoLabel}.`}>
                   <div className="space-y-3">
-                    {listaRelatorio.length === 0 ? (
+                    {listaHistorico.length === 0 ? (
                       <EmptyState text="Nenhuma reserva encontrada com os filtros atuais." />
                     ) : (
-                      listaRelatorio.map((r) => (
+                      listaHistorico.map((r) => (
                         <ReservationCard
                           key={String(r.id)}
                           r={r}
@@ -1560,102 +2173,190 @@ export default function AdminPage() {
               <>
                 <Section
                   title={`Financeiro — ${periodoLabel}`}
-                  subtitle="Resumo financeiro das reservas aprovadas de venda antecipada e venda na hora."
-                  right={
-                    <button
-                      onClick={exportarRelatorioCobranca}
-                      className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
-                    >
-                      Exportar relatório de cobrança
-                    </button>
-                  }
+                  subtitle="Filtros iniciam em hoje. Use os submenus abaixo para alternar entre cobrança e bebidas."
                 >
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-                    <StatCard title="Vendas antecipadas aprovadas" value={computed.vendasAprovadas.length} />
-                    <StatCard title="Vendas na hora aprovadas" value={computed.vendasNaHoraAprovadas.length} />
-                    <StatCard title="Reservas financeiras aprovadas" value={computed.reservasFinanceirasAprovadas.length} />
-                    <StatCard title="Total de sinais" value={formatCurrencyBR(computed.totalSinal)} />
-                    <StatCard title="Falta receber na hora" value={formatCurrencyBR(computed.totalFaltaReceber)} />
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setFinanceTab('cobranca')}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                        financeTab === 'cobranca' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                      }`}
+                    >
+                      Relatório de cobrança de camarotes
+                    </button>
+
+                    <button
+                      onClick={() => setFinanceTab('bebidas')}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                        financeTab === 'bebidas' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                      }`}
+                    >
+                      Relatório de bebidas de cortesia
+                    </button>
                   </div>
                 </Section>
 
-                <Section
-                  title="Recepção / cobrança"
-                  subtitle="Lista operacional para cobrar o valor restante na entrada. A exportação usa estes mesmos dados."
-                >
-                  <div className="overflow-x-auto rounded-2xl border border-neutral-200">
-                    <table className="min-w-full bg-white text-sm">
-                      <thead className="bg-neutral-50">
-                        <tr className="text-left text-neutral-600">
-                          <th className="px-4 py-3 font-semibold">Data</th>
-                          <th className="px-4 py-3 font-semibold">Espaço</th>
-                          <th className="px-4 py-3 font-semibold">Tipo</th>
-                          <th className="px-4 py-3 font-semibold">Nome</th>
-                          <th className="px-4 py-3 font-semibold">Telefone</th>
-                          <th className="px-4 py-3 font-semibold">Sinal</th>
-                          <th className="px-4 py-3 font-semibold">Valor total</th>
-                          <th className="px-4 py-3 font-semibold">Falta receber</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {computed.cobrancaRecepcao.length === 0 ? (
-                          <tr>
-                            <td colSpan={8} className="px-4 py-6 text-center text-neutral-500">
-                              Nenhuma reserva financeira aprovada no período atual.
-                            </td>
-                          </tr>
-                        ) : (
-                          computed.cobrancaRecepcao.map((r) => (
-                            <tr key={String(r.id)} className="border-t border-neutral-200">
-                              <td className="px-4 py-3">{formatBRDate(r.data_evento)}</td>
-                              <td className="px-4 py-3 font-medium text-neutral-900">{displayEspacoCompleto(r.espaco_id)}</td>
-                              <td className="px-4 py-3">{labelTipo(r.tipo)}</td>
-                              <td className="px-4 py-3">{r.nome}</td>
-                              <td className="px-4 py-3">{formatTelefoneRelatorio(r.telefone)}</td>
-                              <td className="px-4 py-3 text-emerald-700">{formatCurrencyBR(r.valor_sinal)}</td>
-                              <td className="px-4 py-3 text-blue-700">{formatCurrencyBR(r.valor_espaco)}</td>
-                              <td className="px-4 py-3 font-semibold text-yellow-700">{formatCurrencyBR(valorFaltaReceber(r))}</td>
+                {financeTab === 'cobranca' ? (
+                  <>
+                    <Section
+                      title="Relatório de cobrança de camarotes"
+                      subtitle="Lista operacional para cobrar o valor restante na entrada."
+                      right={
+                        <button
+                          onClick={exportarRelatorioCobranca}
+                          className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+                        >
+                          Exportar CSV
+                        </button>
+                      }
+                    >
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+                        <StatCard title="Vendas antecipadas aprovadas" value={computed.vendasAprovadas.length} />
+                        <StatCard title="Vendas na hora aprovadas" value={computed.vendasNaHoraAprovadas.length} />
+                        <StatCard title="Reservas financeiras aprovadas" value={computed.reservasFinanceirasAprovadas.length} />
+                        <StatCard title="Total de sinais" value={formatCurrencyBR(computed.totalSinal)} />
+                        <StatCard title="Falta receber na hora" value={formatCurrencyBR(computed.totalFaltaReceber)} />
+                      </div>
+                    </Section>
+
+                    <Section title="Recepção / cobrança" subtitle="Modelo operacional para caixa/recepção.">
+                      <div className="overflow-x-auto rounded-2xl border border-neutral-200">
+                        <table className="min-w-full bg-white text-sm">
+                          <thead className="bg-neutral-50">
+                            <tr className="text-left text-neutral-600">
+                              <th className="px-4 py-3 font-semibold">Data</th>
+                              <th className="px-4 py-3 font-semibold">Espaço</th>
+                              <th className="px-4 py-3 font-semibold">Tipo</th>
+                              <th className="px-4 py-3 font-semibold">Nome</th>
+                              <th className="px-4 py-3 font-semibold">Telefone</th>
+                              <th className="px-4 py-3 font-semibold">Sinal</th>
+                              <th className="px-4 py-3 font-semibold">Valor total</th>
+                              <th className="px-4 py-3 font-semibold">Falta receber</th>
                             </tr>
+                          </thead>
+                          <tbody>
+                            {computed.cobrancaRecepcao.length === 0 ? (
+                              <tr>
+                                <td colSpan={8} className="px-4 py-6 text-center text-neutral-500">
+                                  Nenhuma reserva financeira aprovada no período atual.
+                                </td>
+                              </tr>
+                            ) : (
+                              computed.cobrancaRecepcao.map((r) => (
+                                <tr key={String(r.id)} className="border-t border-neutral-200">
+                                  <td className="px-4 py-3">{formatBRDate(r.data_evento)}</td>
+                                  <td className="px-4 py-3 font-medium text-neutral-900">{displayEspacoCompleto(r.espaco_id)}</td>
+                                  <td className="px-4 py-3">{labelTipo(r.tipo)}</td>
+                                  <td className="px-4 py-3">{r.nome}</td>
+                                  <td className="px-4 py-3">{formatTelefoneRelatorio(r.telefone)}</td>
+                                  <td className="px-4 py-3 text-emerald-700">{formatCurrencyBR(r.valor_sinal)}</td>
+                                  <td className="px-4 py-3 text-blue-700">{formatCurrencyBR(r.valor_espaco)}</td>
+                                  <td className="px-4 py-3 font-semibold text-yellow-700">{formatCurrencyBR(valorFaltaReceber(r))}</td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </Section>
+
+                    <Section title="Financeiro por evento/data" subtitle="Mostra total de sinais e o total que falta receber no evento.">
+                      <div className="space-y-3">
+                        {computed.financeiroPorEvento.length === 0 ? (
+                          <EmptyState text="Nenhum dado financeiro encontrado no período atual." />
+                        ) : (
+                          computed.financeiroPorEvento.map((item) => (
+                            <div key={item.data_evento} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                <div>
+                                  <div className="text-base font-semibold text-neutral-900">{formatBRDate(item.data_evento)}</div>
+                                  <div className="mt-1 text-sm text-neutral-500">{item.reservasFinanceiras} reserva(s) financeira(s) aprovada(s)</div>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                                    <div className="text-xs text-emerald-700">Total de sinais do evento</div>
+                                    <div className="mt-1 text-lg font-semibold text-emerald-900">{formatCurrencyBR(item.totalSinais)}</div>
+                                  </div>
+
+                                  <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+                                    <div className="text-xs text-blue-700">Falta receber na hora</div>
+                                    <div className="mt-1 text-lg font-semibold text-blue-900">{formatCurrencyBR(item.totalFaltaReceber)}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           ))
                         )}
-                      </tbody>
-                    </table>
-                  </div>
-                </Section>
+                      </div>
+                    </Section>
+                  </>
+                ) : null}
 
-                <Section
-                  title="Financeiro por evento/data"
-                  subtitle="Mostra o total de sinais e o total que falta receber no evento."
-                >
-                  <div className="space-y-3">
-                    {computed.financeiroPorEvento.length === 0 ? (
-                      <EmptyState text="Nenhum dado financeiro encontrado no período atual." />
-                    ) : (
-                      computed.financeiroPorEvento.map((item) => (
-                        <div key={item.data_evento} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-                          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                            <div>
-                              <div className="text-base font-semibold text-neutral-900">{formatBRDate(item.data_evento)}</div>
-                              <div className="mt-1 text-sm text-neutral-500">{item.reservasFinanceiras} reserva(s) financeira(s) aprovada(s)</div>
-                            </div>
+                {financeTab === 'bebidas' ? (
+                  <>
+                    <Section
+                      title="Relatório de bebidas de cortesia"
+                      subtitle="Modelo operacional para separar bebidas destinadas às reservas aprovadas de cortesia/aniversário."
+                      right={
+                        <button
+                          onClick={exportarRelatorioBebidas}
+                          className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+                        >
+                          Exportar CSV
+                        </button>
+                      }
+                    >
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                        <StatCard title="Reservas com bebida" value={computed.bebidasCortesia.length} />
+                        <StatCard title="Cortesias aprovadas" value={computed.cortesiasAprovadas.length} />
+                        <StatCard
+                          title="Aniversários"
+                          value={computed.bebidasCortesia.filter((r) => normLower(r.tipo) === 'aniversario').length}
+                        />
+                        <StatCard
+                          title="Cortesias"
+                          value={computed.bebidasCortesia.filter((r) => normLower(r.tipo) === 'cortesia').length}
+                        />
+                      </div>
+                    </Section>
 
-                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-                                <div className="text-xs text-emerald-700">Total de sinais do evento</div>
-                                <div className="mt-1 text-lg font-semibold text-emerald-900">{formatCurrencyBR(item.totalSinais)}</div>
-                              </div>
-
-                              <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-                                <div className="text-xs text-blue-700">Falta receber na hora</div>
-                                <div className="mt-1 text-lg font-semibold text-blue-900">{formatCurrencyBR(item.totalFaltaReceber)}</div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </Section>
+                    <Section title="Bebidas destinadas" subtitle="Espaço, nome do cliente, tipo e bebida destinada.">
+                      <div className="overflow-x-auto rounded-2xl border border-neutral-200">
+                        <table className="min-w-full bg-white text-sm">
+                          <thead className="bg-neutral-50">
+                            <tr className="text-left text-neutral-600">
+                              <th className="px-4 py-3 font-semibold">Data</th>
+                              <th className="px-4 py-3 font-semibold">Espaço</th>
+                              <th className="px-4 py-3 font-semibold">Nome do cliente</th>
+                              <th className="px-4 py-3 font-semibold">Tipo</th>
+                              <th className="px-4 py-3 font-semibold">Bebida destinada</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {computed.bebidasCortesia.length === 0 ? (
+                              <tr>
+                                <td colSpan={5} className="px-4 py-6 text-center text-neutral-500">
+                                  Nenhuma bebida de cortesia/aniversário encontrada no período atual.
+                                </td>
+                              </tr>
+                            ) : (
+                              computed.bebidasCortesia.map((r) => (
+                                <tr key={String(r.id)} className="border-t border-neutral-200">
+                                  <td className="px-4 py-3">{formatBRDate(r.data_evento)}</td>
+                                  <td className="px-4 py-3 font-medium text-neutral-900">{displayEspacoCompleto(r.espaco_id)}</td>
+                                  <td className="px-4 py-3">{r.nome}</td>
+                                  <td className="px-4 py-3">{labelTipo(r.tipo)}</td>
+                                  <td className="px-4 py-3 text-orange-700 font-semibold">{r.bebida_cortesia || '—'}</td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </Section>
+                  </>
+                ) : null}
               </>
             ) : null}
           </>
@@ -1667,7 +2368,7 @@ export default function AdminPage() {
           <button className="absolute inset-0 bg-black/40" onClick={fecharDetalhesReserva} aria-label="Fechar" />
 
           <div className="relative max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-neutral-200 bg-white p-5 shadow-2xl">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <h3 className="text-lg font-semibold tracking-tight text-neutral-900">
                   {isMesa(reservaSelecionada.espaco_id) ? 'Mesa' : 'Camarote'} {displayLocal(reservaSelecionada.espaco_id)} •{' '}
@@ -1726,6 +2427,15 @@ export default function AdminPage() {
                       <div className="text-neutral-500">Tipo</div>
                       <div className="mt-1 font-medium text-neutral-900">{labelTipo(reservaSelecionada.tipo)}</div>
                     </div>
+
+                    {isTipoBebida(reservaSelecionada.tipo) ? (
+                      <div>
+                        <div className="text-neutral-500">Bebida destinada</div>
+                        <div className="mt-1 rounded-xl border border-orange-200 bg-orange-50 p-3 font-semibold text-orange-900">
+                          {String(reservaSelecionada.bebida_cortesia ?? '').trim() || '—'}
+                        </div>
+                      </div>
+                    ) : null}
 
                     <div>
                       <div className="text-neutral-500">Solicitante</div>
@@ -2069,7 +2779,7 @@ export default function AdminPage() {
           />
 
           <div className="relative w-full max-w-4xl rounded-3xl border border-neutral-200 bg-white p-5 shadow-2xl">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <h3 className="text-lg font-semibold tracking-tight text-neutral-900">{modalTitle}</h3>
                 <p className="mt-1 break-all text-xs text-neutral-500">{modalPath ?? '—'}</p>
