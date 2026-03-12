@@ -37,12 +37,10 @@ function monthNowYYYYMM() {
 }
 
 function monthRangeFromYYYYMM(ym: string) {
-  // ym = "YYYY-MM"
   const [yStr, mStr] = ym.split('-')
   const y = Number(yStr)
   const m = Number(mStr)
-  const start = new Date(y, m - 1, 1)
-  const end = new Date(y, m, 0) // último dia do mês
+  const end = new Date(y, m, 0)
   const startISO = `${yStr}-${mStr}-01`
   const endISO = `${yStr}-${mStr}-${String(end.getDate()).padStart(2, '0')}`
   return { startISO, endISO }
@@ -80,12 +78,20 @@ function toneTipo(tipo: string) {
   return 'bg-orange-400/15 text-orange-200 border-orange-400/25'
 }
 
-function StatCard({ title, value, hint }: { title: string; value: number | string; hint?: string }) {
+function StatCard({
+  title,
+  value,
+  hint,
+}: {
+  title: string
+  value: number | string
+  hint?: string
+}) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.25)]">
       <div className="text-xs text-white/60">{title}</div>
-      <div className="mt-1 text-3xl font-semibold tracking-tight">{value}</div>
-      {hint ? <div className="mt-1 text-xs text-white/45">{hint}</div> : null}
+      <div className="mt-1 break-words text-2xl font-semibold tracking-tight sm:text-3xl">{value}</div>
+      {hint ? <div className="mt-1 text-xs leading-5 text-white/45">{hint}</div> : null}
     </div>
   )
 }
@@ -114,14 +120,19 @@ export default function MinhasReservasPage() {
         router.push('/login?next=/minhas-reservas')
         return
       }
+
       setUserId(u.id)
 
-      // tenta pegar nome do profiles
-      const { data: p } = await supabase.from('profiles').select('full_name').eq('id', u.id).maybeSingle()
-      setUserName((p as any)?.full_name ?? (u.user_metadata as any)?.full_name ?? u.email ?? 'Usuário')
+      const { data: p } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', u.id)
+        .maybeSingle()
 
+      setUserName((p as any)?.full_name ?? (u.user_metadata as any)?.full_name ?? u.email ?? 'Usuário')
       setAuthChecking(false)
     }
+
     check()
   }, [router])
 
@@ -129,6 +140,7 @@ export default function MinhasReservasPage() {
     if (!userId) return
     setErroUi(null)
     setLoading(true)
+
     try {
       const { startISO, endISO } = monthRangeFromYYYYMM(mes)
 
@@ -157,12 +169,14 @@ export default function MinhasReservasPage() {
       }
 
       const { data, error } = await q
+
       if (error) {
         console.error(error)
         setErroUi(`Erro ao buscar reservas: ${error.message}`)
         setRows([])
         return
       }
+
       setRows((data as ReservaRow[]) || [])
     } finally {
       setLoading(false)
@@ -179,7 +193,9 @@ export default function MinhasReservasPage() {
     const total = rows.length
     const pendentes = rows.filter((r) => normLower(r.status) === 'pendente').length
     const canceladas = rows.filter((r) => normLower(r.status) === 'cancelado').length
-    const aprovadas = rows.filter((r) => ['aprovado_venda', 'aprovado_cortesia'].includes(normLower(r.status))).length
+    const aprovadas = rows.filter((r) =>
+      ['aprovado_venda', 'aprovado_cortesia'].includes(normLower(r.status))
+    ).length
 
     const vendas = rows.filter((r) => normLower(r.tipo) === 'venda').length
     const cortesias = rows.filter((r) => normLower(r.tipo) === 'cortesia').length
@@ -194,55 +210,56 @@ export default function MinhasReservasPage() {
   }
 
   if (authChecking) {
-    return <div className="min-h-screen bg-neutral-950 text-white p-8">Verificando login…</div>
+    return <div className="min-h-svh bg-neutral-950 p-8 text-white">Verificando login…</div>
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
-      <div className="sticky top-0 z-40 border-b border-white/10 bg-neutral-950/75 backdrop-blur">
-        <div className="mx-auto max-w-6xl px-6 py-5">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Meu relatório (mês)</h1>
-              <p className="mt-1 text-sm text-white/60">
+    <div className="min-h-svh bg-neutral-950 text-white">
+      <div className="sticky top-0 z-50 border-b border-white/10 bg-neutral-950/95 backdrop-blur-md">
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                Meu relatório (mês)
+              </h1>
+              <p className="mt-1 break-words text-sm text-white/60">
                 Usuário: <span className="font-semibold text-white">{userName}</span>
               </p>
               {erroUi ? <p className="mt-3 text-sm text-red-300">{erroUi}</p> : null}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:w-auto">
               <button
                 onClick={() => router.push('/')}
-                className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/15"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/15"
               >
                 Voltar pro mapa
               </button>
 
               <button
                 onClick={fetchRows}
-                className="rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-semibold hover:bg-white/[0.07]"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-semibold hover:bg-white/[0.07]"
               >
                 Atualizar
               </button>
 
               <button
                 onClick={sair}
-                className="rounded-xl bg-neutral-800 px-4 py-2 text-sm font-semibold hover:bg-neutral-700"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-neutral-800 px-4 py-2 text-sm font-semibold hover:bg-neutral-700"
               >
                 Sair
               </button>
             </div>
           </div>
 
-          {/* filtros */}
-          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-12">
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-12">
             <div className="md:col-span-3">
               <label className="text-xs text-white/55">Mês</label>
               <input
                 type="month"
                 value={mes}
                 onChange={(e) => setMes(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-sm outline-none focus:border-white/25"
+                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-3 text-[16px] outline-none focus:border-white/25"
               />
             </div>
 
@@ -251,7 +268,7 @@ export default function MinhasReservasPage() {
               <select
                 value={tipoFiltro}
                 onChange={(e) => setTipoFiltro(e.target.value as any)}
-                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-sm outline-none focus:border-white/25"
+                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-3 text-[16px] outline-none focus:border-white/25"
               >
                 <option value="todas">Todos</option>
                 <option value="venda">Venda</option>
@@ -265,7 +282,7 @@ export default function MinhasReservasPage() {
               <select
                 value={statusFiltro}
                 onChange={(e) => setStatusFiltro(e.target.value as any)}
-                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-sm outline-none focus:border-white/25"
+                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-3 text-[16px] outline-none focus:border-white/25"
               >
                 <option value="todos">Todos</option>
                 <option value="pendente">Pendentes</option>
@@ -280,17 +297,15 @@ export default function MinhasReservasPage() {
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Ex: João, 45999..., C4, M13..."
-                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-sm outline-none focus:border-white/25"
+                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-3 text-[16px] outline-none focus:border-white/25"
               />
             </div>
           </div>
         </div>
       </div>
 
-      {/* conteúdo */}
-      <div className="mx-auto max-w-6xl px-6 py-8 space-y-6">
-        {/* ✅ total do mês como principal */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
           <StatCard title="TOTAL DO MÊS" value={computed.total} hint="Todas as reservas no mês (por data_evento)" />
           <StatCard title="Pendentes" value={computed.pendentes} />
           <StatCard title="Aprovadas" value={computed.aprovadas} />
@@ -299,7 +314,7 @@ export default function MinhasReservasPage() {
           <StatCard title="Cortesia/Aniv" value={computed.cortesias + computed.aniversarios} />
         </div>
 
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.25)]">
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.25)] sm:p-5">
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div>
               <h2 className="text-lg font-semibold tracking-tight">Reservas do mês</h2>
@@ -309,7 +324,9 @@ export default function MinhasReservasPage() {
 
           <div className="mt-4">
             {loading ? (
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-6 text-sm text-white/70">Carregando…</div>
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-6 text-sm text-white/70">
+                Carregando…
+              </div>
             ) : rows.length === 0 ? (
               <div className="rounded-2xl border border-white/10 bg-black/20 p-6 text-sm text-white/55">
                 Nenhuma reserva encontrada para os filtros atuais.
@@ -322,8 +339,11 @@ export default function MinhasReservasPage() {
                     className="rounded-2xl border border-white/10 bg-black/25 p-4 shadow-[0_14px_30px_rgba(0,0,0,0.22)]"
                   >
                     <div className="flex flex-wrap items-center gap-2">
-                      <div className="text-base font-semibold tracking-tight">{r.espaco_id}</div>
-                      <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs bg-blue-400/15 text-blue-200 border-blue-400/25">
+                      <div className="text-base font-semibold tracking-tight break-words">
+                        {r.espaco_id}
+                      </div>
+
+                      <span className="inline-flex items-center rounded-full border border-blue-400/25 bg-blue-400/15 px-2.5 py-1 text-xs text-blue-200">
                         {r.data_evento}
                       </span>
 
@@ -344,13 +364,17 @@ export default function MinhasReservasPage() {
 
                       <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
                         <div className="text-xs text-white/50">Telefone</div>
-                        <div className="font-medium">{r.telefone}</div>
+                        <div className="font-medium break-all">{r.telefone}</div>
                       </div>
 
                       <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 md:col-span-2">
                         <div className="text-xs text-white/50">Observação</div>
                         <div className="mt-1 whitespace-pre-wrap break-words text-sm text-white/85">
-                          {String(r.observacao ?? '').trim() ? r.observacao : <span className="text-white/45">—</span>}
+                          {String(r.observacao ?? '').trim() ? (
+                            r.observacao
+                          ) : (
+                            <span className="text-white/45">—</span>
+                          )}
                         </div>
                       </div>
                     </div>
