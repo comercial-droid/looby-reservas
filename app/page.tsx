@@ -46,6 +46,13 @@ type ConfigBebidaRow = {
   created_at?: string
 }
 
+const STATUSS_ATIVOS_RESERVA = [
+  'pendente',
+  'aprovado_venda',
+  'aprovado_cortesia',
+  'aprovado_na_hora',
+] as const
+
 function todayISO() {
   const d = new Date()
   const yyyy = d.getFullYear()
@@ -75,6 +82,10 @@ function normStatus(s?: string | null) {
 
 function normTipo(s?: string | null) {
   return (s ?? '').toString().trim().toLowerCase()
+}
+
+function isStatusReservaAtivo(status?: string | null) {
+  return STATUSS_ATIVOS_RESERVA.includes(normStatus(status) as (typeof STATUSS_ATIVOS_RESERVA)[number])
 }
 
 function safeFileName(name: string) {
@@ -431,6 +442,24 @@ export default function Home() {
     setConfigBebidas((data ?? []) as ConfigBebidaRow[])
   }
 
+  async function existeReservaAtivaNoEspaco(dateISO: string, espacoId: string) {
+    const espacoIdNormalizado = String(espacoId || '').trim().toLowerCase()
+
+    const { data, error } = await supabase
+      .from('reservas')
+      .select('id, status, nome')
+      .eq('data_evento', dateISO)
+      .eq('espaco_id', espacoIdNormalizado)
+      .in('status', [...STATUSS_ATIVOS_RESERVA])
+      .limit(1)
+
+    if (error) {
+      throw error
+    }
+
+    return Array.isArray(data) && data.length > 0
+  }
+
   useEffect(() => {
     let active = true
 
@@ -622,7 +651,7 @@ export default function Home() {
     const map = new Map<string, ReservaRow>()
 
     reservasDia.forEach((r) => {
-      if (normStatus(r.status) === 'cancelado') return
+      if (!isStatusReservaAtivo(r.status)) return
       const key = String(r.espaco_id || '').trim().toLowerCase()
       if (!key) return
       map.set(key, r)
@@ -632,7 +661,7 @@ export default function Home() {
   }, [reservasDia])
 
   const reservasAtivasDia = useMemo(() => {
-    return reservasDia.filter((r) => normStatus(r.status) !== 'cancelado')
+    return reservasDia.filter((r) => isStatusReservaAtivo(r.status))
   }, [reservasDia])
 
   const totalReservasDia = useMemo(() => reservasAtivasDia.length, [reservasAtivasDia])
@@ -1023,6 +1052,13 @@ export default function Home() {
       }
     }
 
+    if (st === 'cancelado') {
+      return {
+        label: 'Cancelado',
+        cls: 'bg-red-50 text-red-700 border-red-200',
+      }
+    }
+
     return {
       label: (r?.status ?? 'Status').toString(),
       cls: 'bg-neutral-100 text-neutral-700 border-neutral-200',
@@ -1130,8 +1166,7 @@ export default function Home() {
 
     return () => cancelAnimationFrame(raf)
   }, [svgMarkup, reservaPorEspaco, highlightedId, VALID_IDS])
-
-  async function submitReserva(e: React.FormEvent) {
+    async function submitReserva(e: React.FormEvent) {
     e.preventDefault()
 
     if (isReadOnlyHistorico) {
@@ -1150,6 +1185,8 @@ export default function Home() {
 
     const dataEventoFinal =
       vendaNaHoraAtiva && dataEvento === dataEventoOperacional ? dataEventoOperacional : dataEvento
+
+    const espacoIdFinal = selecionado.id.toLowerCase().trim()
 
     const tipoFinanceiroFinal = tipoFinal === 'VENDA' || tipoFinal === 'NA_HORA'
     const bebidaFinal =
@@ -1228,8 +1265,8 @@ export default function Home() {
       return
     }
 
-    if (reservaPorEspaco.get(selecionado.id)) {
-      alert(`Esse espaço já está reservado: ${statusLabel(selecionado.id)}.`)
+    if (reservaPorEspaco.get(espacoIdFinal)) {
+      alert(`Esse espaço já está reservado: ${statusLabel(espacoIdFinal)}.`)
       return
     }
 
@@ -1253,11 +1290,21 @@ export default function Home() {
     try {
       setSaving(true)
 
+      // VALIDAÇÃO DIRETA NO BANCO
+      // Ignora reservas canceladas e impede conflito real de concorrência.
+      const espacoJaTemReservaAtiva = await existeReservaAtivaNoEspaco(dataEventoFinal, espacoIdFinal)
+
+      if (espacoJaTemReservaAtiva) {
+        await carregarReservasDoDia(dataEventoFinal)
+        alert('Este espaço já está reservado para esta data.')
+        return
+      }
+
       if (anexoObs) {
         const ext = getExt(anexoObs.name)
         const uuid = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`
         const fileName = safeFileName(`${uuid}.${ext}`)
-        const path = `observacoes/${dataEventoFinal}/${selecionado.id}/${fileName}`
+        const path = `observacoes/${dataEventoFinal}/${espacoIdFinal}/${fileName}`
 
         const { data: upData, error: upErr } = await supabase.storage
           .from('comprovantes')
@@ -1279,7 +1326,7 @@ export default function Home() {
       const payload = {
         user_id: userId,
         data_evento: dataEventoFinal,
-        espaco_id: selecionado.id.toLowerCase().trim(),
+        espaco_id: espacoIdFinal,
         nome: nomeCompleto.trim(),
         telefone: tel,
         tipo: tipoFinal.toLowerCase(),
@@ -1320,7 +1367,10 @@ export default function Home() {
           code === '23505'
 
         if (isReservaDuplicada) {
-          alert('Este espaço acabou de ser reservado por outro usuário.')
+          await carregarReservasDoDia(dataEventoFinal)
+          alert(
+            'Este espaço não pode ser salvo porque já existe um registro bloqueando essa data.\n\nSe a reserva anterior estiver cancelada, ajuste a restrição única no banco conforme o SQL que te passei.'
+          )
         } else {
           alert(
             `Erro ao salvar a reserva.\n\nMensagem: ${error?.message ?? 'sem mensagem'}\nCódigo: ${error?.code ?? 'sem código'}`
@@ -1519,7 +1569,7 @@ export default function Home() {
                     <span>Aprovado (Venda na hora)</span>
                   </div>
 
-                  <div className="pt-2 text-xs text-red-50/55">Cancelado não pinta.</div>
+                  <div className="pt-2 text-xs text-red-50/55">Cancelado não pinta e não deve bloquear nova reserva.</div>
                 </div>
               ) : null}
             </div>
