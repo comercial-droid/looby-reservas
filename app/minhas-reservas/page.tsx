@@ -78,6 +78,18 @@ function toneTipo(tipo: string) {
   return 'bg-orange-400/15 text-orange-200 border-orange-400/25'
 }
 
+function formatCreatedAtBR(dateValue?: string) {
+  if (!dateValue) return ''
+  return new Date(dateValue).toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+  })
+}
+
+function podeCancelarReserva(status: string) {
+  const s = normLower(status)
+  return s === 'pendente' || s === 'aprovado_venda' || s === 'aprovado_cortesia'
+}
+
 function StatCard({
   title,
   value,
@@ -111,6 +123,7 @@ export default function MinhasReservasPage() {
   const [loading, setLoading] = useState(false)
   const [erroUi, setErroUi] = useState<string | null>(null)
   const [rows, setRows] = useState<ReservaRow[]>([])
+  const [cancelandoId, setCancelandoId] = useState<string | null>(null)
 
   useEffect(() => {
     async function check() {
@@ -203,6 +216,47 @@ export default function MinhasReservasPage() {
 
     return { total, pendentes, aprovadas, canceladas, vendas, cortesias, aniversarios }
   }, [rows])
+
+  async function cancelarReserva(r: ReservaRow) {
+    if (!userId) {
+      alert('Faça login novamente.')
+      return
+    }
+
+    if (!podeCancelarReserva(r.status)) {
+      alert('Essa reserva não pode mais ser cancelada por você.')
+      return
+    }
+
+    const confirmar = window.confirm(
+      `Tem certeza que deseja cancelar sua reserva do espaço ${r.espaco_id} para o dia ${r.data_evento}?`
+    )
+
+    if (!confirmar) return
+
+    const idStr = String(r.id)
+    setCancelandoId(idStr)
+    setErroUi(null)
+
+    try {
+      const { error } = await supabase
+        .from('reservas')
+        .update({ status: 'cancelado' })
+        .eq('id', r.id)
+        .eq('user_id', userId)
+
+      if (error) {
+        console.error(error)
+        setErroUi(`Erro ao cancelar reserva: ${error.message}`)
+        return
+      }
+
+      await fetchRows()
+      alert('Reserva cancelada com sucesso.')
+    } finally {
+      setCancelandoId(null)
+    }
+  }
 
   async function sair() {
     await supabase.auth.signOut()
@@ -333,59 +387,84 @@ export default function MinhasReservasPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {rows.map((r) => (
-                  <div
-                    key={String(r.id)}
-                    className="rounded-2xl border border-white/10 bg-black/25 p-4 shadow-[0_14px_30px_rgba(0,0,0,0.22)]"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="text-base font-semibold tracking-tight break-words">
-                        {r.espaco_id}
-                      </div>
+                {rows.map((r) => {
+                  const podeCancelar = podeCancelarReserva(r.status)
+                  const cancelando = cancelandoId === String(r.id)
 
-                      <span className="inline-flex items-center rounded-full border border-blue-400/25 bg-blue-400/15 px-2.5 py-1 text-xs text-blue-200">
-                        {r.data_evento}
-                      </span>
+                  return (
+                    <div
+                      key={String(r.id)}
+                      className="rounded-2xl border border-white/10 bg-black/25 p-4 shadow-[0_14px_30px_rgba(0,0,0,0.22)]"
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="text-base font-semibold tracking-tight break-words">
+                              {r.espaco_id}
+                            </div>
 
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs ${toneStatus(r.status)}`}>
-                        {labelStatus(r.status)}
-                      </span>
+                            <span className="inline-flex items-center rounded-full border border-blue-400/25 bg-blue-400/15 px-2.5 py-1 text-xs text-blue-200">
+                              {r.data_evento}
+                            </span>
 
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs ${toneTipo(r.tipo)}`}>
-                        {labelTipo(r.tipo)}
-                      </span>
-                    </div>
+                            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs ${toneStatus(r.status)}`}>
+                              {labelStatus(r.status)}
+                            </span>
 
-                    <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-white/80 md:grid-cols-2">
-                      <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-                        <div className="text-xs text-white/50">Nome</div>
-                        <div className="truncate font-medium">{r.nome}</div>
-                      </div>
+                            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs ${toneTipo(r.tipo)}`}>
+                              {labelTipo(r.tipo)}
+                            </span>
+                          </div>
 
-                      <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-                        <div className="text-xs text-white/50">Telefone</div>
-                        <div className="font-medium break-all">{r.telefone}</div>
-                      </div>
+                          <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-white/80 md:grid-cols-2">
+                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                              <div className="text-xs text-white/50">Nome</div>
+                              <div className="truncate font-medium">{r.nome}</div>
+                            </div>
 
-                      <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 md:col-span-2">
-                        <div className="text-xs text-white/50">Observação</div>
-                        <div className="mt-1 whitespace-pre-wrap break-words text-sm text-white/85">
-                          {String(r.observacao ?? '').trim() ? (
-                            r.observacao
+                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                              <div className="text-xs text-white/50">Telefone</div>
+                              <div className="font-medium break-all">{r.telefone}</div>
+                            </div>
+
+                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 md:col-span-2">
+                              <div className="text-xs text-white/50">Observação</div>
+                              <div className="mt-1 whitespace-pre-wrap break-words text-sm text-white/85">
+                                {String(r.observacao ?? '').trim() ? (
+                                  r.observacao
+                                ) : (
+                                  <span className="text-white/45">—</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {r.created_at ? (
+                            <div className="mt-3 text-xs text-white/45">
+                              Criado em: {formatCreatedAtBR(r.created_at)}
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div className="flex shrink-0 flex-col gap-2 sm:w-[170px]">
+                          {podeCancelar ? (
+                            <button
+                              onClick={() => cancelarReserva(r)}
+                              disabled={cancelando}
+                              className="inline-flex min-h-[42px] items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {cancelando ? 'Cancelando...' : 'Cancelar reserva'}
+                            </button>
                           ) : (
-                            <span className="text-white/45">—</span>
+                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-center text-xs text-white/45">
+                              Sem ações disponíveis
+                            </div>
                           )}
                         </div>
                       </div>
                     </div>
-
-                    {r.created_at ? (
-                      <div className="mt-3 text-xs text-white/45">
-                        Criado em: {new Date(r.created_at).toLocaleString('pt-BR')}
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
