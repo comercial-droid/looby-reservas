@@ -216,59 +216,59 @@ export default function MinhasReservasPage() {
   return (
     <div className="min-h-svh bg-neutral-950 text-white">
       <div className="fixed inset-x-0 top-0 z-[100] border-b border-white/10 bg-neutral-950/95 backdrop-blur-md supports-[backdrop-filter]:bg-neutral-950/85">
-        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6 sm:py-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+              <h1 className="text-lg font-semibold tracking-tight sm:text-2xl">
                 Meu relatório (mês)
               </h1>
-              <p className="mt-1 break-words text-sm text-white/60">
+              <p className="mt-1 break-words text-xs text-white/60 sm:text-sm">
                 Usuário: <span className="font-semibold text-white">{userName}</span>
               </p>
-              {erroUi ? <p className="mt-3 text-sm text-red-300">{erroUi}</p> : null}
+              {erroUi ? <p className="mt-2 text-xs text-red-300 sm:text-sm">{erroUi}</p> : null}
             </div>
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:w-auto">
+            <div className="grid grid-cols-3 gap-2 lg:w-auto">
               <button
                 onClick={() => router.push('/')}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/15"
+                className="inline-flex min-h-[40px] items-center justify-center rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/15 sm:min-h-[44px] sm:px-4 sm:text-sm"
               >
-                Voltar pro mapa
+                Voltar
               </button>
 
               <button
                 onClick={fetchRows}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-semibold hover:bg-white/[0.07]"
+                className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2 text-xs font-semibold hover:bg-white/[0.07] sm:min-h-[44px] sm:px-4 sm:text-sm"
               >
                 Atualizar
               </button>
 
               <button
                 onClick={sair}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-neutral-800 px-4 py-2 text-sm font-semibold hover:bg-neutral-700"
+                className="inline-flex min-h-[40px] items-center justify-center rounded-xl bg-neutral-800 px-3 py-2 text-xs font-semibold hover:bg-neutral-700 sm:min-h-[44px] sm:px-4 sm:text-sm"
               >
                 Sair
               </button>
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-12">
+          <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-12 md:gap-3">
             <div className="md:col-span-3">
-              <label className="text-xs text-white/55">Mês</label>
+              <label className="text-[11px] text-white/55 sm:text-xs">Mês</label>
               <input
                 type="month"
                 value={mes}
                 onChange={(e) => setMes(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-3 text-[16px] outline-none focus:border-white/25"
+                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-[16px] outline-none focus:border-white/25 sm:py-3"
               />
             </div>
 
             <div className="md:col-span-3">
-              <label className="text-xs text-white/55">Tipo</label>
+              <label className="text-[11px] text-white/55 sm:text-xs">Tipo</label>
               <select
                 value={tipoFiltro}
                 onChange={(e) => setTipoFiltro(e.target.value as any)}
-                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-3 text-[16px] outline-none focus:border-white/25"
+                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-[16px] outline-none focus:border-white/25 sm:py-3"
               >
                 <option value="todas">Todos</option>
                 <option value="venda">Venda</option>
@@ -278,11 +278,11 @@ export default function MinhasReservasPage() {
             </div>
 
             <div className="md:col-span-3">
-              <label className="text-xs text-white/55">Status</label>
+              <label className="text-[11px] text-white/55 sm:text-xs">Status</label>
               <select
                 value={statusFiltro}
                 onChange={(e) => setStatusFiltro(e.target.value as any)}
-                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-3 text-[16px] outline-none focus:border-white/25"
+                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-[16px] outline-none focus:border-white/25 sm:py-3"
               >
                 <option value="todos">Todos</option>
                 <option value="pendente">Pendentes</option>
@@ -292,19 +292,19 @@ export default function MinhasReservasPage() {
             </div>
 
             <div className="md:col-span-3">
-              <label className="text-xs text-white/55">Buscar (nome / telefone / espaço)</label>
+              <label className="text-[11px] text-white/55 sm:text-xs">Buscar</label>
               <input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Ex: João, 45999..., C4, M13..."
-                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-3 text-[16px] outline-none focus:border-white/25"
+                placeholder="João, C4, M13..."
+                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-[16px] outline-none focus:border-white/25 sm:py-3"
               />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl space-y-6 px-4 pb-6 pt-[320px] sm:px-6 sm:pb-8 sm:pt-[270px] lg:pt-[210px]">
+      <div className="mx-auto max-w-6xl space-y-6 px-4 pb-6 pt-[250px] sm:px-6 sm:pb-8 sm:pt-[250px] lg:pt-[210px]">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
           <StatCard title="TOTAL DO MÊS" value={computed.total} hint="Todas as reservas no mês (por data_evento)" />
           <StatCard title="Pendentes" value={computed.pendentes} />
