@@ -215,8 +215,8 @@ export default function MinhasReservasPage() {
 
   return (
     <div className="min-h-svh bg-neutral-950 text-white">
-      <div className="fixed inset-x-0 top-0 z-[100] border-b border-white/10 bg-neutral-950/95 backdrop-blur-md supports-[backdrop-filter]:bg-neutral-950/85">
-        <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6 sm:py-5">
+      <div className="border-b border-white/10 bg-neutral-950">
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <h1 className="text-lg font-semibold tracking-tight sm:text-2xl">
@@ -304,7 +304,7 @@ export default function MinhasReservasPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl space-y-6 px-4 pb-6 pt-[250px] sm:px-6 sm:pb-8 sm:pt-[250px] lg:pt-[210px]">
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
           <StatCard title="TOTAL DO MÊS" value={computed.total} hint="Todas as reservas no mês (por data_evento)" />
           <StatCard title="Pendentes" value={computed.pendentes} />
