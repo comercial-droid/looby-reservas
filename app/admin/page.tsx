@@ -310,31 +310,84 @@ function formatTelefoneRelatorio(tel: string) {
   return `${d.slice(0, 4)}****`
 }
 
-function csvEscape(value: any) {
-  const s = String(value ?? '')
-  if (/[",;\n]/.test(s)) {
-    return `"${s.replace(/"/g, '""')}"`
+async function exportTablePdf(params: {
+  filename: string
+  title: string
+  subtitle?: string
+  headers: string[]
+  rows: string[][]
+  columnStyles?: Record<number, any>
+}) {
+  const { default: JsPDF } = await import('jspdf')
+  const autoTableModule = await import('jspdf-autotable')
+  const autoTable = (autoTableModule as any).default
+
+  const doc = new JsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'a4',
+  })
+
+  const pageWidth = doc.internal.pageSize.getWidth()
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
+  doc.text(params.title, 10, 12)
+
+  if (params.subtitle) {
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(90)
+    doc.text(params.subtitle, 10, 18)
+    doc.setTextColor(0)
   }
-  return s
+
+  autoTable(doc, {
+    startY: params.subtitle ? 24 : 18,
+    head: [params.headers],
+    body: params.rows,
+    theme: 'grid',
+    margin: { top: 10, right: 8, bottom: 10, left: 8 },
+    tableWidth: 'auto',
+    styles: {
+      font: 'helvetica',
+      fontSize: 8,
+      cellPadding: 2.2,
+      overflow: 'linebreak',
+      valign: 'middle',
+      textColor: [35, 35, 35],
+      lineColor: [220, 220, 220],
+      lineWidth: 0.2,
+    },
+    headStyles: {
+      fillColor: [35, 35, 35],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      halign: 'center',
+      valign: 'middle',
+    },
+    bodyStyles: {
+      valign: 'middle',
+    },
+    alternateRowStyles: {
+      fillColor: [248, 248, 248],
+    },
+    columnStyles: params.columnStyles ?? {},
+    didDrawPage: () => {
+      const pageCount = doc.getNumberOfPages()
+      const pageSize = doc.internal.pageSize
+      const footerY = pageSize.getHeight() - 5
+
+      doc.setFontSize(8)
+      doc.setTextColor(120)
+      doc.text(`Página ${pageCount}`, pageWidth - 22, footerY)
+      doc.text('Looby Reservas', 10, footerY)
+      doc.setTextColor(0)
+    },
+  })
+
+  doc.save(params.filename)
 }
-
-function downloadCsv(filename: string, headers: string[], rows: (string | number)[][]) {
-  const csvContent = [
-    headers.map(csvEscape).join(';'),
-    ...rows.map((row) => row.map(csvEscape).join(';')),
-  ].join('\n')
-
-  const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-}
-
 function toBRPhoneE164(phoneRaw: string) {
   const d = onlyDigits(phoneRaw)
   if (!d) return ''
@@ -1498,69 +1551,102 @@ async function salvarPreco(row: ConfigPrecoRow) {
     return reservas.filter((r) => isCancelado(r.status))
   }, [reservas, historicoStatus])
 
-  function exportarRelatorioCobranca() {
-    if (computed.cobrancaRecepcao.length === 0) {
-      alert('Não há reservas aprovadas financeiras para exportar no período selecionado.')
-      return
-    }
-
-    const rows = computed.cobrancaRecepcao.map((r) => [
-      formatBRDate(r.data_evento),
-      displayEspacoCompleto(r.espaco_id),
-      labelTipo(r.tipo),
-      r.nome,
-      formatTelefoneRelatorio(r.telefone),
-      Number(r.valor_sinal ?? 0).toFixed(2).replace('.', ','),
-      Number(r.valor_espaco ?? 0).toFixed(2).replace('.', ','),
-      valorFaltaReceber(r).toFixed(2).replace('.', ','),
-    ])
-
-    const filename =
-      dataInicial && dataFinal && dataInicial === dataFinal
-        ? `relatorio-cobranca-${dataInicial}.csv`
-        : `relatorio-cobranca-${dataInicial || 'inicio'}-${dataFinal || 'fim'}.csv`
-
-    downloadCsv(
-      filename,
-      [
-        'Data do evento',
-        'Espaço',
-        'Tipo',
-        'Nome do cliente',
-        'Telefone',
-        'Valor sinal antecipado',
-        'Valor total',
-        'Falta receber na hora',
-      ],
-      rows
-    )
+async function exportarRelatorioCobranca() {
+  if (computed.cobrancaRecepcao.length === 0) {
+    alert('Não há reservas aprovadas financeiras para exportar no período selecionado.')
+    return
   }
 
-  function exportarRelatorioBebidas() {
-    if (computed.bebidasCortesia.length === 0) {
-      alert('Não há bebidas de cortesia/aniversário para exportar no período selecionado.')
-      return
-    }
+  const rows = computed.cobrancaRecepcao.map((r) => [
+    formatBRDate(r.data_evento),
+    displayEspacoCompleto(r.espaco_id),
+    labelTipo(r.tipo),
+    r.nome,
+    formatTelefoneRelatorio(r.telefone),
+    formatCurrencyBR(r.valor_sinal),
+    formatCurrencyBR(r.valor_espaco),
+    formatCurrencyBR(valorFaltaReceber(r)),
+    '',
+  ])
 
-    const rows = computed.bebidasCortesia.map((r) => [
-      formatBRDate(r.data_evento),
-      displayEspacoCompleto(r.espaco_id),
-      r.nome,
-      labelTipo(r.tipo),
-      String(r.bebida_cortesia ?? ''),
-    ])
+  const filename =
+    dataInicial && dataFinal && dataInicial === dataFinal
+      ? `relatorio-cobranca-${dataInicial}.pdf`
+      : `relatorio-cobranca-${dataInicial || 'inicio'}-${dataFinal || 'fim'}.pdf`
 
-    const filename =
-      dataInicial && dataFinal && dataInicial === dataFinal
-        ? `relatorio-bebidas-${dataInicial}.csv`
-        : `relatorio-bebidas-${dataInicial || 'inicio'}-${dataFinal || 'fim'}.csv`
+  await exportTablePdf({
+    filename,
+    title: 'Relatório de cobrança de camarotes',
+    subtitle: `Período: ${periodoLabel}`,
+    headers: [
+      'Data',
+      'Espaço',
+      'Tipo',
+      'Nome do cliente',
+      'Telefone',
+      'Sinal',
+      'Valor total',
+      'Falta receber',
+      'Anotações',
+    ],
+    rows,
+    columnStyles: {
+      0: { cellWidth: 22 },
+      1: { cellWidth: 28 },
+      2: { cellWidth: 28 },
+      3: { cellWidth: 52 },
+      4: { cellWidth: 28 },
+      5: { cellWidth: 24, halign: 'right' },
+      6: { cellWidth: 24, halign: 'right' },
+      7: { cellWidth: 26, halign: 'right' },
+      8: { cellWidth: 55 },
+    },
+  })
+}
 
-    downloadCsv(
-      filename,
-      ['Data do evento', 'Espaço', 'Nome do cliente', 'Tipo', 'Bebida destinada'],
-      rows
-    )
+  async function exportarRelatorioBebidas() {
+  if (computed.bebidasCortesia.length === 0) {
+    alert('Não há bebidas de cortesia/aniversário para exportar no período selecionado.')
+    return
   }
+
+  const rows = computed.bebidasCortesia.map((r) => [
+    formatBRDate(r.data_evento),
+    displayEspacoCompleto(r.espaco_id),
+    r.nome,
+    labelTipo(r.tipo),
+    String(r.bebida_cortesia ?? '') || '—',
+    '',
+  ])
+
+  const filename =
+    dataInicial && dataFinal && dataInicial === dataFinal
+      ? `relatorio-bebidas-${dataInicial}.pdf`
+      : `relatorio-bebidas-${dataInicial || 'inicio'}-${dataFinal || 'fim'}.pdf`
+
+  await exportTablePdf({
+    filename,
+    title: 'Relatório de bebidas de cortesia',
+    subtitle: `Período: ${periodoLabel}`,
+    headers: [
+      'Data',
+      'Espaço',
+      'Nome do cliente',
+      'Tipo',
+      'Bebida destinada',
+      'Anotações',
+    ],
+    rows,
+    columnStyles: {
+      0: { cellWidth: 24 },
+      1: { cellWidth: 30 },
+      2: { cellWidth: 58 },
+      3: { cellWidth: 28 },
+      4: { cellWidth: 48 },
+      5: { cellWidth: 78 },
+    },
+  })
+}
 
   if (authChecking) {
     return <div className="min-h-screen bg-neutral-50 p-8 text-neutral-700">Verificando permissão…</div>
@@ -2206,7 +2292,7 @@ async function salvarPreco(row: ConfigPrecoRow) {
                           onClick={exportarRelatorioCobranca}
                           className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
                         >
-                          Exportar CSV
+                          Exportar PDF
                         </button>
                       }
                     >
@@ -2220,39 +2306,41 @@ async function salvarPreco(row: ConfigPrecoRow) {
                     </Section>
 
                     <Section title="Recepção / cobrança" subtitle="Modelo operacional para caixa/recepção.">
-                      <div className="overflow-x-auto rounded-2xl border border-neutral-200">
+                      <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
                         <table className="min-w-full bg-white text-sm">
                           <thead className="bg-neutral-50">
-                            <tr className="text-left text-neutral-600">
-                              <th className="px-4 py-3 font-semibold">Data</th>
-                              <th className="px-4 py-3 font-semibold">Espaço</th>
-                              <th className="px-4 py-3 font-semibold">Tipo</th>
-                              <th className="px-4 py-3 font-semibold">Nome</th>
-                              <th className="px-4 py-3 font-semibold">Telefone</th>
-                              <th className="px-4 py-3 font-semibold">Sinal</th>
-                              <th className="px-4 py-3 font-semibold">Valor total</th>
-                              <th className="px-4 py-3 font-semibold">Falta receber</th>
-                            </tr>
-                          </thead>
+  <tr className="text-left text-neutral-600">
+    <th className="px-4 py-3 font-semibold whitespace-nowrap">Data</th>
+    <th className="px-4 py-3 font-semibold whitespace-nowrap">Espaço</th>
+    <th className="px-4 py-3 font-semibold whitespace-nowrap">Tipo</th>
+    <th className="px-4 py-3 font-semibold min-w-[240px]">Nome</th>
+    <th className="px-4 py-3 font-semibold whitespace-nowrap">Telefone</th>
+    <th className="px-4 py-3 font-semibold whitespace-nowrap">Sinal</th>
+    <th className="px-4 py-3 font-semibold whitespace-nowrap">Valor total</th>
+    <th className="px-4 py-3 font-semibold whitespace-nowrap">Falta receber</th>
+    <th className="px-4 py-3 font-semibold min-w-[240px]">Anotações</th>
+  </tr>
+</thead>
                           <tbody>
                             {computed.cobrancaRecepcao.length === 0 ? (
                               <tr>
-                                <td colSpan={8} className="px-4 py-6 text-center text-neutral-500">
+                                <td colSpan={9} className="px-4 py-6 text-center text-neutral-500">
                                   Nenhuma reserva financeira aprovada no período atual.
                                 </td>
                               </tr>
                             ) : (
                               computed.cobrancaRecepcao.map((r) => (
                                 <tr key={String(r.id)} className="border-t border-neutral-200">
-                                  <td className="px-4 py-3">{formatBRDate(r.data_evento)}</td>
-                                  <td className="px-4 py-3 font-medium text-neutral-900">{displayEspacoCompleto(r.espaco_id)}</td>
-                                  <td className="px-4 py-3">{labelTipo(r.tipo)}</td>
-                                  <td className="px-4 py-3">{r.nome}</td>
-                                  <td className="px-4 py-3">{formatTelefoneRelatorio(r.telefone)}</td>
-                                  <td className="px-4 py-3 text-emerald-700">{formatCurrencyBR(r.valor_sinal)}</td>
-                                  <td className="px-4 py-3 text-blue-700">{formatCurrencyBR(r.valor_espaco)}</td>
-                                  <td className="px-4 py-3 font-semibold text-yellow-700">{formatCurrencyBR(valorFaltaReceber(r))}</td>
-                                </tr>
+  <td className="px-4 py-3 whitespace-nowrap">{formatBRDate(r.data_evento)}</td>
+  <td className="px-4 py-3 font-medium text-neutral-900 whitespace-nowrap">{displayEspacoCompleto(r.espaco_id)}</td>
+  <td className="px-4 py-3 whitespace-nowrap">{labelTipo(r.tipo)}</td>
+  <td className="px-4 py-3 min-w-[240px]">{r.nome}</td>
+  <td className="px-4 py-3 whitespace-nowrap">{formatTelefoneRelatorio(r.telefone)}</td>
+  <td className="px-4 py-3 text-emerald-700 whitespace-nowrap">{formatCurrencyBR(r.valor_sinal)}</td>
+  <td className="px-4 py-3 text-blue-700 whitespace-nowrap">{formatCurrencyBR(r.valor_espaco)}</td>
+  <td className="px-4 py-3 font-semibold text-yellow-700 whitespace-nowrap">{formatCurrencyBR(valorFaltaReceber(r))}</td>
+  <td className="px-4 py-3 min-w-[240px] text-neutral-300">________________________________</td>
+</tr>
                               ))
                             )}
                           </tbody>
@@ -2303,7 +2391,7 @@ async function salvarPreco(row: ConfigPrecoRow) {
                           onClick={exportarRelatorioBebidas}
                           className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
                         >
-                          Exportar CSV
+                          Exportar PDF
                         </button>
                       }
                     >
@@ -2322,33 +2410,35 @@ async function salvarPreco(row: ConfigPrecoRow) {
                     </Section>
 
                     <Section title="Bebidas destinadas" subtitle="Espaço, nome do cliente, tipo e bebida destinada.">
-                      <div className="overflow-x-auto rounded-2xl border border-neutral-200">
+                      <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
                         <table className="min-w-full bg-white text-sm">
                           <thead className="bg-neutral-50">
-                            <tr className="text-left text-neutral-600">
-                              <th className="px-4 py-3 font-semibold">Data</th>
-                              <th className="px-4 py-3 font-semibold">Espaço</th>
-                              <th className="px-4 py-3 font-semibold">Nome do cliente</th>
-                              <th className="px-4 py-3 font-semibold">Tipo</th>
-                              <th className="px-4 py-3 font-semibold">Bebida destinada</th>
-                            </tr>
-                          </thead>
+  <tr className="text-left text-neutral-600">
+    <th className="px-4 py-3 font-semibold whitespace-nowrap">Data</th>
+    <th className="px-4 py-3 font-semibold whitespace-nowrap">Espaço</th>
+    <th className="px-4 py-3 font-semibold min-w-[220px]">Nome do cliente</th>
+    <th className="px-4 py-3 font-semibold whitespace-nowrap">Tipo</th>
+    <th className="px-4 py-3 font-semibold min-w-[180px]">Bebida destinada</th>
+    <th className="px-4 py-3 font-semibold min-w-[240px]">Anotações</th>
+  </tr>
+</thead>
                           <tbody>
                             {computed.bebidasCortesia.length === 0 ? (
                               <tr>
-                                <td colSpan={5} className="px-4 py-6 text-center text-neutral-500">
+                                <td colSpan={6} className="px-4 py-6 text-center text-neutral-500">
                                   Nenhuma bebida de cortesia/aniversário encontrada no período atual.
                                 </td>
                               </tr>
                             ) : (
                               computed.bebidasCortesia.map((r) => (
                                 <tr key={String(r.id)} className="border-t border-neutral-200">
-                                  <td className="px-4 py-3">{formatBRDate(r.data_evento)}</td>
-                                  <td className="px-4 py-3 font-medium text-neutral-900">{displayEspacoCompleto(r.espaco_id)}</td>
-                                  <td className="px-4 py-3">{r.nome}</td>
-                                  <td className="px-4 py-3">{labelTipo(r.tipo)}</td>
-                                  <td className="px-4 py-3 text-orange-700 font-semibold">{r.bebida_cortesia || '—'}</td>
-                                </tr>
+  <td className="px-4 py-3 whitespace-nowrap">{formatBRDate(r.data_evento)}</td>
+  <td className="px-4 py-3 font-medium text-neutral-900 whitespace-nowrap">{displayEspacoCompleto(r.espaco_id)}</td>
+  <td className="px-4 py-3 min-w-[220px]">{r.nome}</td>
+  <td className="px-4 py-3 whitespace-nowrap">{labelTipo(r.tipo)}</td>
+  <td className="px-4 py-3 min-w-[180px] font-semibold text-orange-700">{r.bebida_cortesia || '—'}</td>
+  <td className="px-4 py-3 min-w-[240px] text-neutral-300">________________________________</td>
+</tr>
                               ))
                             )}
                           </tbody>
