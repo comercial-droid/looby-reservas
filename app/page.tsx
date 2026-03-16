@@ -252,16 +252,24 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(false)
 
   const vendaNaHoraAtiva = useMemo(() => isJanelaVendaNaHora(now), [now])
-  const dataEventoOperacional = useMemo(() => getDataEventoOperacional(now), [now])
+const dataEventoOperacional = useMemo(() => getDataEventoOperacional(now), [now])
 
-  const vendaAntecipadaLiberada = useMemo(() => {
-    return !(vendaNaHoraAtiva && dataEvento === dataEventoOperacional)
-  }, [vendaNaHoraAtiva, dataEvento, dataEventoOperacional])
+const dataSelecionadaEhOperacionalAtual = useMemo(() => {
+  return dataEvento === dataEventoOperacional
+}, [dataEvento, dataEventoOperacional])
 
-  const isReadOnlyHistorico = useMemo(() => {
-    if (vendaNaHoraAtiva && dataEvento === dataEventoOperacional) return false
-    return isPastDateISO(dataEvento)
-  }, [dataEvento, vendaNaHoraAtiva, dataEventoOperacional])
+const modoSomenteNaHora = useMemo(() => {
+  return vendaNaHoraAtiva && dataSelecionadaEhOperacionalAtual
+}, [vendaNaHoraAtiva, dataSelecionadaEhOperacionalAtual])
+
+const vendaAntecipadaLiberada = useMemo(() => {
+  return !modoSomenteNaHora
+}, [modoSomenteNaHora])
+
+const isReadOnlyHistorico = useMemo(() => {
+  if (modoSomenteNaHora) return false
+  return isPastDateISO(dataEvento)
+}, [dataEvento, modoSomenteNaHora])
 
   const mostrarCampoBebida = tipoReserva === 'ANIVERSARIO' || tipoReserva === 'CORTESIA'
 
@@ -506,21 +514,15 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    if (vendaNaHoraAtiva) {
-      setDataEvento(dataEventoOperacional)
-    }
-  }, [vendaNaHoraAtiva, dataEventoOperacional])
+  if (modoSomenteNaHora) {
+    setTipoReserva('NA_HORA')
+    return
+  }
 
-  useEffect(() => {
-    if (vendaNaHoraAtiva && dataEvento === dataEventoOperacional) {
-      setTipoReserva('NA_HORA')
-      return
-    }
-
-    if (tipoReserva === 'NA_HORA' && dataEvento !== dataEventoOperacional) {
-      setTipoReserva('VENDA')
-    }
-  }, [vendaNaHoraAtiva, dataEvento, dataEventoOperacional, tipoReserva])
+  if (tipoReserva === 'NA_HORA') {
+    setTipoReserva('VENDA')
+  }
+}, [modoSomenteNaHora, tipoReserva])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -1075,7 +1077,7 @@ export default function Home() {
     setSelecionadoId(espacoId.toLowerCase())
     setNomeCompleto('')
     setTelefone('')
-    setTipoReserva(vendaNaHoraAtiva ? 'NA_HORA' : 'ANIVERSARIO')
+    setTipoReserva(modoSomenteNaHora ? 'NA_HORA' : 'ANIVERSARIO')
     setModeloPreco('')
     setValorEspaco('')
     setValorSinal('')
@@ -1180,11 +1182,8 @@ export default function Home() {
       return
     }
 
-    const tipoFinal: ReservaTipo =
-      vendaNaHoraAtiva && dataEvento === dataEventoOperacional ? 'NA_HORA' : tipoReserva
-
-    const dataEventoFinal =
-      vendaNaHoraAtiva && dataEvento === dataEventoOperacional ? dataEventoOperacional : dataEvento
+    const tipoFinal: ReservaTipo = modoSomenteNaHora ? 'NA_HORA' : tipoReserva
+const dataEventoFinal = dataEvento
 
     const espacoIdFinal = selecionado.id.toLowerCase().trim()
 
@@ -1407,9 +1406,7 @@ export default function Home() {
               <p className={`mt-2 text-sm leading-6 sm:text-base ${SOFT_TEXT}`}>
                 {vendaNaHoraAtiva ? (
                   <>
-                    Janela operacional ativa. As solicitações feitas agora entram como{' '}
-                    <b className="text-white">venda na hora</b> vinculada ao evento de{' '}
-                    <b className="text-white">{dataEventoOperacional}</b>.
+                    Janela operacional ativa. Para a data de {dataEventoOperacional}, o sistema permite apenas venda na hora. Para datas futuras, você pode fazer reserva antecipada.
                   </>
                 ) : (
                   <>
@@ -1439,23 +1436,23 @@ export default function Home() {
           <div className="mt-6 space-y-2">
             <label className={LABEL_CLASS}>Data do evento</label>
             <input
-              type="date"
-              value={dataEvento}
-              onChange={(e) => {
-                if (vendaNaHoraAtiva) return
-                setDataEvento(e.target.value)
-              }}
-              disabled={vendaNaHoraAtiva}
-              className={`${INPUT_CLASS} ${vendaNaHoraAtiva ? 'cursor-not-allowed opacity-70' : ''}`}
-            />
+  type="date"
+  value={dataEvento}
+  onChange={(e) => setDataEvento(e.target.value)}
+  className={INPUT_CLASS}
+/>
 
-            {vendaNaHoraAtiva ? (
+            {modoSomenteNaHora ? (
               <p className="mt-2 text-xs leading-5 text-sky-200">
-                ℹ️ Das 23:00 até 07:00, o sistema usa automaticamente a data operacional do evento para reservas na hora.
+                ℹ️ Para a data operacional atual, o sistema permite somente venda na hora.
               </p>
             ) : isPastDateISO(dataEvento) ? (
               <p className="mt-2 text-xs leading-5 text-amber-200">
                 ⚠️ Data passada: você pode visualizar o mapa como histórico, mas não poderá solicitar reservas.
+              </p>
+            ) : vendaNaHoraAtiva ? (
+              <p className="mt-2 text-xs leading-5 text-sky-200">
+                ℹ️ Ainda é possível selecionar uma data futura para reserva antecipada.
               </p>
             ) : null}
           </div>
@@ -1865,7 +1862,7 @@ export default function Home() {
                       <p className="mt-1 text-sm leading-6 text-red-50/75">
                         Data:{' '}
                         <b className="text-white">
-                          {vendaNaHoraAtiva && dataEvento === dataEventoOperacional ? dataEventoOperacional : dataEvento}
+                          {dataEvento}
                         </b>{' '}
                         • Espaço:{' '}
                         <b className="text-white">
@@ -1879,7 +1876,7 @@ export default function Home() {
                     </button>
                   </div>
 
-                  {vendaNaHoraAtiva && dataEvento === dataEventoOperacional ? (
+                  {modoSomenteNaHora ? (
                     <div className="mb-4 rounded-xl border border-sky-300/25 bg-sky-400/10 p-3 text-sm text-sky-100">
                       Esta solicitação será registrada como <b>venda na hora</b> para o evento de{' '}
                       <b>{dataEventoOperacional}</b>.
@@ -1917,7 +1914,7 @@ export default function Home() {
                         <option value="VENDA" disabled={!vendaAntecipadaLiberada}>
                           Venda antecipada
                         </option>
-                        {vendaNaHoraAtiva && dataEvento === dataEventoOperacional ? (
+                        {modoSomenteNaHora ? (
                           <option value="NA_HORA">Venda na hora</option>
                         ) : null}
                       </select>
