@@ -93,8 +93,8 @@ function LoginContent() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-neutral-900 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.55)]">
+    <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-neutral-900 p-4 sm:p-6 shadow-[0_24px_70px_rgba(0,0,0,0.55)]">
         <h1 className="text-2xl font-semibold tracking-tight">Entrar</h1>
         <p className="mt-1 text-sm text-white/60">Acesse para solicitar reservas.</p>
 

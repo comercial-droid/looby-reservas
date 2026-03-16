@@ -2307,17 +2307,17 @@ async function exportarRelatorioCobranca() {
 
                     <Section title="Recepção / cobrança" subtitle="Modelo operacional para caixa/recepção.">
                       <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
-                        <table className="min-w-full bg-white text-sm">
+                        <table className="min-w-full bg-white text-xs sm:text-sm">
                           <thead className="bg-neutral-50">
   <tr className="text-left text-neutral-600">
-    <th className="px-4 py-3 font-semibold whitespace-nowrap">Data</th>
-    <th className="px-4 py-3 font-semibold whitespace-nowrap">Espaço</th>
-    <th className="px-4 py-3 font-semibold whitespace-nowrap">Tipo</th>
-    <th className="px-4 py-3 font-semibold min-w-[240px]">Nome</th>
-    <th className="px-4 py-3 font-semibold whitespace-nowrap">Telefone</th>
-    <th className="px-4 py-3 font-semibold whitespace-nowrap">Sinal</th>
-    <th className="px-4 py-3 font-semibold whitespace-nowrap">Valor total</th>
-    <th className="px-4 py-3 font-semibold whitespace-nowrap">Falta receber</th>
+    <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold whitespace-nowrap text-xs sm:text-sm">Data</th>
+    <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold whitespace-nowrap text-xs sm:text-sm">Espaço</th>
+    <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold whitespace-nowrap text-xs sm:text-sm">Tipo</th>
+    <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold min-w-[120px] sm:min-w-[240px] text-xs sm:text-sm">Nome</th>
+    <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold whitespace-nowrap text-xs sm:text-sm">Telefone</th>
+    <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold whitespace-nowrap text-xs sm:text-sm">Sinal</th>
+    <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold whitespace-nowrap text-xs sm:text-sm">Valor total</th>
+    <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold whitespace-nowrap text-xs sm:text-sm">Falta receber</th>
     <th className="px-4 py-3 font-semibold min-w-[240px]">Anotações</th>
   </tr>
 </thead>
@@ -2331,15 +2331,15 @@ async function exportarRelatorioCobranca() {
                             ) : (
                               computed.cobrancaRecepcao.map((r) => (
                                 <tr key={String(r.id)} className="border-t border-neutral-200">
-  <td className="px-4 py-3 whitespace-nowrap">{formatBRDate(r.data_evento)}</td>
-  <td className="px-4 py-3 font-medium text-neutral-900 whitespace-nowrap">{displayEspacoCompleto(r.espaco_id)}</td>
-  <td className="px-4 py-3 whitespace-nowrap">{labelTipo(r.tipo)}</td>
-  <td className="px-4 py-3 min-w-[240px]">{r.nome}</td>
-  <td className="px-4 py-3 whitespace-nowrap">{formatTelefoneRelatorio(r.telefone)}</td>
-  <td className="px-4 py-3 text-emerald-700 whitespace-nowrap">{formatCurrencyBR(r.valor_sinal)}</td>
-  <td className="px-4 py-3 text-blue-700 whitespace-nowrap">{formatCurrencyBR(r.valor_espaco)}</td>
-  <td className="px-4 py-3 font-semibold text-yellow-700 whitespace-nowrap">{formatCurrencyBR(valorFaltaReceber(r))}</td>
-  <td className="px-4 py-3 min-w-[240px] text-neutral-300">________________________________</td>
+  <td className="px-2 py-2 sm:px-4 sm:py-3 whitespace-nowrap text-xs sm:text-sm">{formatBRDate(r.data_evento)}</td>
+  <td className="px-2 py-2 sm:px-4 sm:py-3 font-medium text-neutral-900 whitespace-nowrap text-xs sm:text-sm">{displayEspacoCompleto(r.espaco_id)}</td>
+  <td className="px-2 py-2 sm:px-4 sm:py-3 whitespace-nowrap text-xs sm:text-sm">{labelTipo(r.tipo)}</td>
+  <td className="px-2 py-2 sm:px-4 sm:py-3 min-w-[120px] sm:min-w-[240px] text-xs sm:text-sm">{r.nome}</td>
+  <td className="px-2 py-2 sm:px-4 sm:py-3 whitespace-nowrap text-xs sm:text-sm">{formatTelefoneRelatorio(r.telefone)}</td>
+  <td className="px-2 py-2 sm:px-4 sm:py-3 text-emerald-700 whitespace-nowrap text-xs sm:text-sm">{formatCurrencyBR(r.valor_sinal)}</td>
+  <td className="px-2 py-2 sm:px-4 sm:py-3 text-blue-700 whitespace-nowrap text-xs sm:text-sm">{formatCurrencyBR(r.valor_espaco)}</td>
+  <td className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-yellow-700 whitespace-nowrap text-xs sm:text-sm">{formatCurrencyBR(valorFaltaReceber(r))}</td>
+  <td className="px-2 py-2 sm:px-4 sm:py-3 min-w-[120px] sm:min-w-[240px] text-neutral-300 text-xs sm:text-sm">________________________________</td>
 </tr>
                               ))
                             )}

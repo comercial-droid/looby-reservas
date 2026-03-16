@@ -1,8 +1,45 @@
 'use client'
 
-import { supabase } from '@/lib/supabaseClient'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabaseClient'
+import { DataStep } from './components/DataStep'
+import {
+  todayISO,
+  dateToISO,
+  isPastDateISO,
+  onlyDigits,
+  normStatus,
+  normTipo,
+  isStatusReservaAtivo,
+  safeFileName,
+  getExt,
+  isAllowedFile,
+  formatBRPhoneMasked,
+  formatCurrencyBR,
+  getSvgElByKnownId,
+  getNowBrasil,
+  isJanelaVendaNaHora,
+  getDataEventoOperacional,
+  tipoPorId,
+} from './utils/helpers'
+import {
+  PRECOS_CAMAROTE_FALLBACK,
+  PRECOS_MESA_FALLBACK,
+  OPCOES_BEBIDA_CORTESIA_FALLBACK,
+  RED_CARD,
+  RED_CARD_LIGHT,
+  RED_INNER,
+  INPUT_CLASS,
+  LABEL_CLASS,
+  MUTED_TEXT,
+  SOFT_TEXT,
+  PRIMARY_BTN,
+  SECONDARY_BTN,
+  GHOST_BTN,
+  STATUSS_ATIVOS_RESERVA,
+  VALID_IDS,
+} from './utils/constants'
 
 type EspacoTipo = 'MESA' | 'CAMAROTE'
 type Espaco = { id: string; nome: string; tipo: EspacoTipo }
@@ -45,160 +82,6 @@ type ConfigBebidaRow = {
   ordem: number
   created_at?: string
 }
-
-const STATUSS_ATIVOS_RESERVA = [
-  'pendente',
-  'aprovado_venda',
-  'aprovado_cortesia',
-  'aprovado_na_hora',
-] as const
-
-function todayISO() {
-  const d = new Date()
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
-}
-
-function dateToISO(d: Date) {
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
-}
-
-function isPastDateISO(dateISO: string) {
-  return String(dateISO || '') < todayISO()
-}
-
-function onlyDigits(s: string) {
-  return (s || '').replace(/\D/g, '')
-}
-
-function normStatus(s?: string | null) {
-  return (s ?? '').toString().trim().toLowerCase()
-}
-
-function normTipo(s?: string | null) {
-  return (s ?? '').toString().trim().toLowerCase()
-}
-
-function isStatusReservaAtivo(status?: string | null) {
-  return STATUSS_ATIVOS_RESERVA.includes(normStatus(status) as (typeof STATUSS_ATIVOS_RESERVA)[number])
-}
-
-function safeFileName(name: string) {
-  return name.replace(/[^\w.\-]+/g, '_')
-}
-
-function getExt(name: string) {
-  const p = name.split('.')
-  if (p.length <= 1) return 'bin'
-  return (p.pop() || 'bin').toLowerCase()
-}
-
-function isAllowedFile(file: File) {
-  return (
-    file.type.startsWith('image/') ||
-    file.type === 'application/pdf' ||
-    file.name.toLowerCase().endsWith('.pdf')
-  )
-}
-
-function formatBRPhoneMasked(raw: string) {
-  const d = onlyDigits(raw || '')
-  if (d.length < 4) return '••••'
-  const last4 = d.slice(-4)
-  return `(**) *****-${last4}`
-}
-
-function formatCurrencyBR(value?: number | null) {
-  const n = Number(value ?? 0)
-  return n.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  })
-}
-
-function getSvgElByKnownId(svgEl: SVGSVGElement, raw: string): SVGGraphicsElement | null {
-  const variants = [raw, raw.toLowerCase(), raw.toUpperCase()]
-
-  for (const v of variants) {
-    try {
-      const found = svgEl.querySelector(`#${CSS.escape(v)}`) as SVGGraphicsElement | null
-      if (found) return found
-    } catch {
-      const found = svgEl.querySelector(`#${v}`) as SVGGraphicsElement | null
-      if (found) return found
-    }
-  }
-
-  return null
-}
-
-function getNowBrasil(): Date {
-  return new Date(
-    new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })
-  )
-}
-
-function isJanelaVendaNaHora(now?: Date) {
-  const current = now ?? getNowBrasil()
-  const h = current.getHours()
-  return h >= 23 || h < 7
-}
-
-function getDataEventoOperacional(now?: Date) {
-  const d = new Date(now ?? getNowBrasil())
-
-  if (d.getHours() < 7) {
-    d.setDate(d.getDate() - 1)
-  }
-
-  return dateToISO(d)
-}
-
-const PRECOS_CAMAROTE_FALLBACK = [
-  'Camarote 3000/1600 consumação',
-  'Camarote 4000/2500 consumação',
-  'Camarote 2000/1000 consumação',
-  'Camarote 1500/1000 consumação',
-  'Camarote 1300/1000 consumação',
-]
-
-const PRECOS_MESA_FALLBACK = [
-  'Mesa Vip 1500/900 consumação',
-  'Mesa vip 1000/570 consumação',
-  'Mesa vip 870/570 consumação',
-  'Mesa vip 700/570 consumação',
-]
-
-const OPCOES_BEBIDA_CORTESIA_FALLBACK = [
-  'sem bebida',
-  'Combão',
-  'vodka',
-  'gin',
-  'espumante',
-]
-
-const RED_CARD =
-  'rounded-2xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.28)]'
-const RED_CARD_LIGHT =
-  'rounded-2xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] p-4 sm:p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]'
-const RED_INNER =
-  'rounded-xl border border-white/10 bg-white/8 backdrop-blur-sm'
-const INPUT_CLASS =
-  'mt-1 w-full rounded-xl border border-red-950/40 bg-white/95 px-3 py-3 text-[16px] text-neutral-900 outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-700/20'
-const LABEL_CLASS = 'text-sm font-medium text-red-50/88'
-const MUTED_TEXT = 'text-red-50/70'
-const SOFT_TEXT = 'text-red-50/85'
-const PRIMARY_BTN =
-  'inline-flex min-h-[44px] items-center justify-center rounded-xl bg-red-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-800 active:scale-[0.99]'
-const SECONDARY_BTN =
-  'inline-flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-red-50 transition hover:bg-white/15 active:scale-[0.99]'
-const GHOST_BTN =
-  'inline-flex min-h-[40px] items-center justify-center rounded-lg border border-white/12 bg-white/5 px-3 py-2 text-xs font-medium text-red-50/90 transition hover:bg-white/10 active:scale-[0.99]'
 
 export default function Home() {
   const router = useRouter()
@@ -314,92 +197,6 @@ const isReadOnlyHistorico = useMemo(() => {
     if (lista.length > 0) return lista
     return OPCOES_BEBIDA_CORTESIA_FALLBACK
   }, [configBebidas])
-
-  const VALID_IDS = useMemo(() => {
-    const mesas = [
-      'vip-125',
-      'vip-120',
-      'vip-117',
-      'm01',
-      'm02',
-      'm03',
-      'm04',
-      'm05',
-      'm06',
-      'm07',
-      'm08',
-      'm09',
-      'm10',
-      'm11',
-      'm12',
-      'm13',
-      'm14',
-      'm15',
-      'm16',
-      'm17',
-      'm18',
-      'm19',
-      'pista20',
-      'pista21',
-      'pista22',
-      'pista23',
-      'pista24',
-      'pista25',
-      'pista26',
-      'pista27',
-      'pista28',
-      'pista29',
-      'pista30',
-      'pista31',
-      'pista32',
-      'pista33',
-      'pista34',
-      'pista35',
-      'pista36',
-      'pista37',
-      'pista38',
-      'pista39',
-      'pista40',
-      'pista41',
-      'pista42',
-      'pista43',
-      'pista51',
-      'pista52',
-      'pista53',
-      'pista54',
-      'pista55',
-      'pista56',
-      'pista65',
-      'pista66',
-      'pista67',
-      'pista68',
-      'pista69',
-      'pista70',
-      'pista79',
-      'pista80',
-      'pista81',
-      'pista82',
-      'pista83',
-      'pista84',
-      'pista93',
-      'pista94',
-      'pista95',
-      'pista96',
-      'pista97',
-      'pista98',
-    ]
-
-    const cams = ['c1', 'c2', 'nuvem', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10', 'c11', 'c12', 'c13', 'c14']
-
-    return [...mesas, ...cams]
-  }, [])
-
-  function tipoPorId(id: string): EspacoTipo {
-    const x = (id || '').toLowerCase()
-    if (x === 'nuvem') return 'CAMAROTE'
-    if (x.startsWith('c')) return 'CAMAROTE'
-    return 'MESA'
-  }
 
   const selecionado: Espaco | null = useMemo(() => {
     if (!selecionadoId) return null
@@ -1398,77 +1195,16 @@ const dataEventoFinal = dataEvento
 
   if (step === 'DATA') {
     return (
-      <div className="flex min-h-svh items-center justify-center bg-[radial-gradient(circle_at_top,#4f111a_0%,#18090c_55%,#090406_100%)] px-4 py-6 text-red-50 sm:p-6">
-        <div className={`w-full max-w-xl ${RED_CARD_LIGHT}`}>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <h1 className="text-2xl font-semibold text-white sm:text-3xl">Reservas — Looby</h1>
-              <p className={`mt-2 text-sm leading-6 sm:text-base ${SOFT_TEXT}`}>
-                {vendaNaHoraAtiva ? (
-                  <>
-                    Janela operacional ativa. Para a data de {dataEventoOperacional}, o sistema permite apenas venda na hora. Para datas futuras, você pode fazer reserva antecipada.
-                  </>
-                ) : (
-                  <>
-                    Escolha a <b className="text-white">data do evento</b> e depois selecione o espaço no mapa.
-                  </>
-                )}
-              </p>
-            </div>
-
-            <button onClick={sair} className={`${PRIMARY_BTN} w-full sm:w-auto`}>
-              Sair
-            </button>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
-            <button onClick={() => router.push('/minhas-reservas')} className={`${SECONDARY_BTN} w-full sm:w-auto`}>
-              Meu relatório
-            </button>
-
-            {isAdmin ? (
-              <button onClick={() => router.push('/admin')} className={`${SECONDARY_BTN} w-full sm:w-auto`}>
-                Admin
-              </button>
-            ) : null}
-          </div>
-
-          <div className="mt-6 space-y-2">
-            <label className={LABEL_CLASS}>Data do evento</label>
-            <input
-  type="date"
-  value={dataEvento}
-  onChange={(e) => setDataEvento(e.target.value)}
-  className={INPUT_CLASS}
-/>
-
-            {modoSomenteNaHora ? (
-              <p className="mt-2 text-xs leading-5 text-sky-200">
-                ℹ️ Para a data operacional atual, o sistema permite somente venda na hora.
-              </p>
-            ) : isPastDateISO(dataEvento) ? (
-              <p className="mt-2 text-xs leading-5 text-amber-200">
-                ⚠️ Data passada: você pode visualizar o mapa como histórico, mas não poderá solicitar reservas.
-              </p>
-            ) : vendaNaHoraAtiva ? (
-              <p className="mt-2 text-xs leading-5 text-sky-200">
-                ℹ️ Ainda é possível selecionar uma data futura para reserva antecipada.
-              </p>
-            ) : null}
-          </div>
-
-          <button
-            onClick={() => setStep('MAPA')}
-            className="mt-6 inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-white px-4 py-3 text-base font-semibold text-[#5b1019] transition hover:bg-red-50"
-          >
-            Avançar para o mapa
-          </button>
-
-          <p className="mt-4 text-xs leading-5 text-red-50/55">
-            (O mapa busca reservas dessa data no Supabase.)
-          </p>
-        </div>
-      </div>
+      <DataStep
+        dataEvento={dataEvento}
+        setDataEvento={setDataEvento}
+        vendaNaHoraAtiva={vendaNaHoraAtiva}
+        dataEventoOperacional={dataEventoOperacional}
+        modoSomenteNaHora={modoSomenteNaHora}
+        isAdmin={isAdmin}
+        setStep={setStep}
+        sair={sair}
+      />
     )
   }
 
@@ -1648,13 +1384,13 @@ const dataEventoFinal = dataEvento
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
-                  <button type="button" onClick={zoomOut} className={GHOST_BTN} aria-label="Diminuir zoom">
+                  <button type="button" onClick={zoomOut} className={`${GHOST_BTN} min-h-[48px] min-w-[48px] text-lg`} aria-label="Diminuir zoom">
                     −
                   </button>
-                  <button type="button" onClick={zoomIn} className={GHOST_BTN} aria-label="Aumentar zoom">
+                  <button type="button" onClick={zoomIn} className={`${GHOST_BTN} min-h-[48px] min-w-[48px] text-lg`} aria-label="Aumentar zoom">
                     +
                   </button>
-                  <button type="button" onClick={resetMapView} className={GHOST_BTN} aria-label="Resetar mapa">
+                  <button type="button" onClick={resetMapView} className={`${GHOST_BTN} min-h-[48px]`} aria-label="Resetar mapa">
                     Reset
                   </button>
                 </div>
@@ -1676,7 +1412,7 @@ const dataEventoFinal = dataEvento
                     className={`relative w-full ${dragging ? 'cursor-grabbing' : isTouchDevice ? 'cursor-default' : 'cursor-grab'}`}
                     style={{
                       display: mapReady ? 'block' : 'none',
-                      minHeight: isMobile ? '420px' : '560px',
+                      minHeight: isMobile ? '500px' : '560px',
                       transform: `translate(${mapOffset.x}px, ${mapOffset.y}px) scale(${mapScale})`,
                       transformOrigin: 'center center',
                       touchAction: 'none',

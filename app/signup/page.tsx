@@ -124,7 +124,7 @@ function SignupContent() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-950 p-6 text-white">
+    <div className="flex min-h-screen items-center justify-center bg-neutral-950 p-4 sm:p-6 text-white">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-neutral-900 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.55)]">
         <h1 className="text-2xl font-semibold tracking-tight">Criar conta</h1>
         <p className="mt-1 text-sm text-white/60">Cadastre seu usuário para solicitar reservas.</p>

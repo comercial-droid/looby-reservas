@@ -306,8 +306,8 @@ export default function MinhasReservasPage() {
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-12 md:gap-3">
-            <div className="md:col-span-3">
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-12 md:gap-3">
+            <div className="sm:col-span-1 md:col-span-3">
               <label className="text-[11px] text-white/55 sm:text-xs">Mês</label>
               <input
                 type="month"
@@ -317,7 +317,7 @@ export default function MinhasReservasPage() {
               />
             </div>
 
-            <div className="md:col-span-3">
+            <div className="sm:col-span-1 md:col-span-3">
               <label className="text-[11px] text-white/55 sm:text-xs">Tipo</label>
               <select
                 value={tipoFiltro}
@@ -331,7 +331,7 @@ export default function MinhasReservasPage() {
               </select>
             </div>
 
-            <div className="md:col-span-3">
+            <div className="sm:col-span-1 md:col-span-3">
               <label className="text-[11px] text-white/55 sm:text-xs">Status</label>
               <select
                 value={statusFiltro}
@@ -345,7 +345,7 @@ export default function MinhasReservasPage() {
               </select>
             </div>
 
-            <div className="md:col-span-3">
+            <div className="sm:col-span-2 md:col-span-3">
               <label className="text-[11px] text-white/55 sm:text-xs">Buscar</label>
               <input
                 value={busca}
@@ -359,7 +359,7 @@ export default function MinhasReservasPage() {
       </div>
 
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           <StatCard title="TOTAL DO MÊS" value={computed.total} hint="Todas as reservas no mês (por data_evento)" />
           <StatCard title="Pendentes" value={computed.pendentes} />
           <StatCard title="Aprovadas" value={computed.aprovadas} />
@@ -416,18 +416,18 @@ export default function MinhasReservasPage() {
                             </span>
                           </div>
 
-                          <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-white/80 md:grid-cols-2">
-                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                          <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-white/80 sm:gap-2 md:grid-cols-2">
+                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 sm:py-2">
                               <div className="text-xs text-white/50">Nome</div>
                               <div className="truncate font-medium">{r.nome}</div>
                             </div>
 
-                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 sm:py-2">
                               <div className="text-xs text-white/50">Telefone</div>
                               <div className="font-medium break-all">{r.telefone}</div>
                             </div>
 
-                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 md:col-span-2">
+                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 sm:py-2 md:col-span-2">
                               <div className="text-xs text-white/50">Observação</div>
                               <div className="mt-1 whitespace-pre-wrap break-words text-sm text-white/85">
                                 {String(r.observacao ?? '').trim() ? (
