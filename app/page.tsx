@@ -1157,10 +1157,14 @@ const dataEventoFinal = dataEvento
         const details = String(error?.details ?? '')
         const code = String(error?.code ?? '')
 
-        const isReservaDuplicada =
-          msg.includes('reservas_unicas_por_espaco_data') ||
-          details.includes('reservas_unicas_por_espaco_data') ||
-          code === '23505'
+       const isReservaDuplicada =
+  msg.includes('reservas_unicas_por_espaco_data') ||
+  details.includes('reservas_unicas_por_espaco_data') ||
+  msg.includes('reservas_unicas_por_espaco_data_ativas') ||
+  details.includes('reservas_unicas_por_espaco_data_ativas') ||
+  msg.includes('reservas_unique_data_espaco') ||
+  details.includes('reservas_unique_data_espaco') ||
+  code === '23505'
 
         if (isReservaDuplicada) {
           await carregarReservasDoDia(dataEventoFinal)
