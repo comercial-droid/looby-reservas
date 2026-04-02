@@ -29,6 +29,7 @@ type ReservaRow = {
   status: Status
   observacao?: string | null
   comprovante_url: string | null
+  comprovantes_extras?: string[] | null
   created_at?: string
 }
 
@@ -262,6 +263,8 @@ function traduzAcao(acao: string) {
       return 'Editou a reserva'
     case 'alterou_status':
       return 'Alterou o status'
+    case 'adicionou_sinal':
+      return 'Adicionou sinal'
     default:
       return acao
   }
@@ -283,6 +286,8 @@ function getCorAcao(acao: string) {
       return 'bg-yellow-500'
     case 'editou_reserva':
       return 'bg-violet-500'
+    case 'adicionou_sinal':
+      return 'bg-emerald-600'
     default:
       return 'bg-neutral-400'
   }
@@ -467,6 +472,26 @@ function isPdf(path: string) {
   return /\.pdf$/i.test(path)
 }
 
+async function getBase64Image(url: string): Promise<string> {
+  const res = await fetch(url)
+  const blob = await res.blob()
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+function getImageDimensions(base64: string): Promise<{ w: number; h: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve({ w: img.width, h: img.height })
+    img.onerror = (e) => reject(e)
+    img.src = base64
+  })
+}
+
 function Section({
   title,
   subtitle,
@@ -517,6 +542,8 @@ function ReservationCard({
 }) {
   const hasObsText = !!String(r.observacao ?? '').trim()
   const hasFile = !!r.comprovante_url
+  const totalAnexos = (r.comprovante_url ? 1 : 0) + (r.comprovantes_extras?.length ?? 0)
+  const hasAnyFile = totalAnexos > 0
   const msg = whatsappMessage(r)
   const link = waLink(r.telefone, msg)
   const modeloPrecoText = String(r.modelo_preco ?? '').trim()
@@ -555,7 +582,7 @@ function ReservationCard({
             ) : null}
             <Pill tone="blue">Resp: {solicitanteNome ?? (r.user_id ? r.user_id.slice(0, 8) : '—')}</Pill>
             {hasObsText ? <Pill>Observação</Pill> : null}
-            {hasFile ? <Pill>Anexo</Pill> : null}
+            {hasAnyFile ? <Pill>{totalAnexos > 1 ? `Anexos (${totalAnexos})` : 'Anexo'}</Pill> : null}
             {r.created_at ? <Pill tone="yellow">Pedido: {formatarDataHora(r.created_at)}</Pill> : null}
           </div>
 
@@ -596,19 +623,36 @@ function ReservationCard({
                 </div>
               ) : null}
 
-              {hasFile ? (
+              {hasAnyFile ? (
                 <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2">
-                  <div className="text-xs text-neutral-500">Anexo</div>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <div className="truncate text-sm text-neutral-700">{r.comprovante_url}</div>
-                    <button
-                      type="button"
-                      onClick={onVerComprovante}
-                      disabled={disabled}
-                      className="text-sm font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-700 disabled:opacity-50"
-                    >
-                      Ver / Baixar
-                    </button>
+                  <div className="text-xs text-neutral-500">{totalAnexos > 1 ? 'Anexos' : 'Anexo'}</div>
+                  <div className="mt-1 flex flex-col gap-2">
+                    {r.comprovante_url && (
+                      <div className="flex items-center justify-between gap-2 overflow-hidden">
+                        <div className="truncate text-sm text-neutral-700">Anexo Original</div>
+                        <button
+                          type="button"
+                          onClick={onVerComprovante}
+                          disabled={disabled}
+                          className="shrink-0 text-sm font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-700 disabled:opacity-50"
+                        >
+                          Ver
+                        </button>
+                      </div>
+                    )}
+                    {r.comprovantes_extras?.map((path, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2 overflow-hidden">
+                        <div className="truncate text-sm text-neutral-700">Anexo Extra {idx + 1}</div>
+                        <button
+                          type="button"
+                          onClick={onVerDetalhes}
+                          disabled={disabled}
+                          className="shrink-0 text-sm font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-700 disabled:opacity-50"
+                        >
+                          Ver
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ) : null}
@@ -638,14 +682,14 @@ function ReservationCard({
             WhatsApp
           </button>
 
-          {onVerComprovante && hasFile ? (
+          {hasAnyFile ? (
             <button
               type="button"
-              onClick={onVerComprovante}
+              onClick={onVerDetalhes || onVerComprovante}
               disabled={disabled}
               className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-55"
             >
-              Anexo
+              {totalAnexos > 1 ? `Anexos (${totalAnexos})` : 'Anexo'}
             </button>
           ) : null}
 
@@ -690,7 +734,7 @@ export default function AdminPage() {
   const router = useRouter()
 
   const [mainTab, setMainTab] = useState<'pendentes' | 'historico' | 'financeiro' | 'configuracoes'>('pendentes')
-  const [financeTab, setFinanceTab] = useState<'cobranca' | 'bebidas'>('cobranca')
+  const [financeTab, setFinanceTab] = useState<'cobranca' | 'bebidas' | 'anexos'>('cobranca')
   const [historicoStatus, setHistoricoStatus] = useState<'todas' | 'pendentes' | 'aprovadas' | 'canceladas'>('todas')
 
   const [reservas, setReservas] = useState<ReservaRow[]>([])
@@ -750,6 +794,7 @@ const [novoPrecoOrdem, setNovoPrecoOrdem] = useState('')
   const [editValorSinal, setEditValorSinal] = useState('')
   const [editObservacao, setEditObservacao] = useState('')
   const [addSinalValor, setAddSinalValor] = useState('')
+  const [addSinalArquivo, setAddSinalArquivo] = useState<File | null>(null)
 
   const periodoLabel = useMemo(() => formatPeriodoLabel(dataInicial, dataFinal), [dataInicial, dataFinal])
 
@@ -1359,9 +1404,36 @@ async function salvarPreco(row: ConfigPrecoRow) {
     setUpdatingId(idStr)
 
     try {
+      let uploadedPath: string | null = null
+
+      // Opcional: Upload do anexo de sinal se houver arquivo
+      if (addSinalArquivo) {
+        const fileExt = addSinalArquivo.name.split('.').pop()
+        const fileName = `${idStr}_adicional_${Date.now()}.${fileExt}`
+        const path = `${idStr}/${fileName}`
+
+        const { data: upData, error: upErr } = await supabase.storage
+          .from('comprovantes')
+          .upload(path, addSinalArquivo, { upsert: true })
+
+        if (upErr) {
+          console.error('UPLOAD ERROR:', upErr)
+          alert(`Erro ao subir anexo: ${upErr.message}`)
+          return
+        }
+        uploadedPath = upData?.path ?? path
+      }
+
+      // 1. Atualizar a reserva com o novo sinal somado e anexo se houver
+      const extras = reservaSelecionada.comprovantes_extras || []
+      const novosExtras = uploadedPath ? [...extras, uploadedPath] : extras
+
       const { data, error } = await supabase
         .from('reservas')
-        .update({ valor_sinal: novoSinal })
+        .update({
+          valor_sinal: novoSinal,
+          comprovantes_extras: novosExtras
+        })
         .eq('id', reservaSelecionada.id)
         .select('*')
         .single()
@@ -1372,10 +1444,36 @@ async function salvarPreco(row: ConfigPrecoRow) {
         return
       }
 
+      // 2. Tentar inserir log detalhado
+      try {
+        const { data: userRes } = await supabase.auth.getUser()
+        const user = userRes?.user
+        const adminNome = profileNameById.get(user?.id ?? '') || user?.email || 'Admin'
+
+        await supabase.from('reservas_log').insert({
+          reserva_id: reservaSelecionada.id,
+          acao: 'adicionou_sinal',
+          status_anterior: reservaSelecionada.status,
+          status_novo: reservaSelecionada.status,
+          user_id: user?.id || null,
+          user_nome: adminNome,
+          detalhes: {
+            valor_adicional: adicional,
+            valor_novo_total: novoSinal,
+            tem_anexo: !!uploadedPath,
+            url_anexo: uploadedPath,
+            descricao: `Adicionou ${formatCurrencyBR(adicional)} ao sinal da reserva.${uploadedPath ? ' (Com novo anexo)' : ''} Total de sinal atualizado para ${formatCurrencyBR(novoSinal)}.`
+          }
+        })
+      } catch (logErr) {
+        console.warn('Erro ao gravar log de sinal:', logErr)
+      }
+
       const atualizada = data as ReservaRow
       setReservaSelecionada(atualizada)
       popularFormularioEdicao(atualizada)
       setAddSinalValor('')
+      setAddSinalArquivo(null)
       await fetchReservas()
       await carregarLogsReserva(idStr)
       alert('Valor do sinal atualizado com sucesso.')
@@ -1384,16 +1482,17 @@ async function salvarPreco(row: ConfigPrecoRow) {
     }
   }
 
-  async function abrirComprovante(r: ReservaRow) {
-    if (!r.comprovante_url) return
+  async function abrirComprovante(r: ReservaRow, customPath?: string) {
+    const path = customPath || r.comprovante_url
+    if (!path) return
     setModalOpen(true)
     setModalTitle(`${isMesa(r.espaco_id) ? 'Mesa' : 'Camarote'} ${displayLocal(r.espaco_id)} • ${r.data_evento}`)
-    setModalPath(r.comprovante_url)
+    setModalPath(path)
     setModalUrl(null)
     setModalLoading(true)
 
     try {
-      const url = await getSignedUrl(r.comprovante_url)
+      const url = await getSignedUrl(path)
       setModalUrl(url)
     } catch (e: any) {
       console.error(e)
@@ -1646,6 +1745,108 @@ async function exportarRelatorioCobranca() {
       5: { cellWidth: 78 },
     },
   })
+}
+
+async function exportarRelatorioAnexos() {
+  const list = computed.cobrancaRecepcao.filter((r) => r.comprovante_url || (r.comprovantes_extras && r.comprovantes_extras.length > 0))
+
+  if (list.length === 0) {
+    alert('Não há comprovantes anexados para exportar no período selecionado.')
+    return
+  }
+
+  const confirmExport = confirm(`Serão processadas ${list.length} reservas. Dependendo do número de fotos, isso pode levar alguns segundos. Continuar?`)
+  if (!confirmExport) return
+
+  try {
+    const { default: JsPDF } = await import('jspdf')
+    const doc = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(16)
+    doc.text('Relatório de Comprovantes de Sinal', 10, 15)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.text(`Período: ${periodoLabel}`, 10, 22)
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 10, 27)
+
+    let currentY = 35
+
+    for (const r of list) {
+      const allPaths = [r.comprovante_url, ...(r.comprovantes_extras || [])].filter(Boolean) as string[]
+      for (const path of allPaths) {
+        const signedUrl = await getSignedUrl(path)
+
+        if (isPdf(path)) {
+          if (currentY + 30 > pageHeight - 15) {
+            doc.addPage()
+            currentY = 15
+          }
+          doc.setFontSize(11)
+          doc.setFont('helvetica', 'bold')
+          doc.text(`${r.nome} — ${displayLocal(r.espaco_id)}`, 10, currentY)
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(9)
+          doc.text(`Data: ${formatBRDate(r.data_evento)} | Arq: ${path.split('/').pop()}`, 10, currentY + 5)
+          doc.setTextColor(150, 0, 0)
+          doc.text('[Arquivo PDF — Pré-visualização não disponível no relatório consolidado]', 10, currentY + 15)
+          doc.setTextColor(0, 0, 0)
+          currentY += 35
+        } else {
+          try {
+            const imgData = await getBase64Image(signedUrl)
+            if (!imgData) throw new Error('No image data')
+            const dim = await getImageDimensions(imgData)
+
+            const maxWidth = 190
+            const maxHeight = (pageHeight - 40) / 2
+            let renderWidth = dim.w
+            let renderHeight = dim.h
+            const ratio = dim.w / dim.h
+
+            if (renderWidth > maxWidth) {
+              renderWidth = maxWidth
+              renderHeight = renderWidth / ratio
+            }
+            if (renderHeight > maxHeight) {
+              renderHeight = maxHeight
+              renderWidth = renderHeight * ratio
+            }
+
+            const xOffset = 10 + (maxWidth - renderWidth) / 2
+            if (currentY + renderHeight + 15 > pageHeight - 15) {
+              doc.addPage()
+              currentY = 15
+            }
+
+            doc.setFontSize(11)
+            doc.setFont('helvetica', 'bold')
+            doc.text(`${r.nome} — ${displayLocal(r.espaco_id)}`, 10, currentY)
+            doc.setFont('helvetica', 'normal')
+            doc.setFontSize(9)
+            doc.text(`Data: ${formatBRDate(r.data_evento)} | Arq: ${path.split('/').pop()}`, 10, currentY + 5)
+
+            doc.addImage(imgData, 'JPEG', xOffset, currentY + 8, renderWidth, renderHeight, undefined, 'FAST')
+            currentY += renderHeight + 25
+          } catch (e) {
+            console.error('Erro ao processar imagem:', path, e)
+            doc.setTextColor(200, 0, 0)
+            doc.text(`[Falha ao carregar anexo: ${path.split('/').pop()}]`, 10, currentY + 10)
+            doc.setTextColor(0, 0, 0)
+            currentY += 20
+          }
+        }
+      }
+    }
+
+    const filename = `anexos-sinal-${dataInicial || 'inicio'}-${dataFinal || 'fim'}.pdf`
+    doc.save(filename)
+  } catch (err: any) {
+    console.error(err)
+    alert(`Erro ao gerar PDF: ${err.message}`)
+  }
 }
 
   if (authChecking) {
@@ -2279,6 +2480,15 @@ async function exportarRelatorioCobranca() {
                     >
                       Relatório de bebidas de cortesia
                     </button>
+
+                    <button
+                      onClick={() => setFinanceTab('anexos')}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                        financeTab === 'anexos' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                      }`}
+                    >
+                      Exportar comprovantes (PDF)
+                    </button>
                   </div>
                 </Section>
 
@@ -2354,99 +2564,132 @@ async function exportarRelatorioCobranca() {
                           <EmptyState text="Nenhum dado financeiro encontrado no período atual." />
                         ) : (
                           computed.financeiroPorEvento.map((item) => (
-                            <div key={item.data_evento} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-                              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                                <div>
-                                  <div className="text-base font-semibold text-neutral-900">{formatBRDate(item.data_evento)}</div>
-                                  <div className="mt-1 text-sm text-neutral-500">{item.reservasFinanceiras} reserva(s) financeira(s) aprovada(s)</div>
-                                </div>
-
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-                                    <div className="text-xs text-emerald-700">Total de sinais do evento</div>
-                                    <div className="mt-1 text-lg font-semibold text-emerald-900">{formatCurrencyBR(item.totalSinais)}</div>
-                                  </div>
-
-                                  <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-                                    <div className="text-xs text-blue-700">Falta receber na hora</div>
-                                    <div className="mt-1 text-lg font-semibold text-blue-900">{formatCurrencyBR(item.totalFaltaReceber)}</div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </Section>
-                  </>
-                ) : null}
-
-                {financeTab === 'bebidas' ? (
-                  <>
+                             <div key={item.data_evento} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                 <div>
+                                   <div className="text-base font-semibold text-neutral-900">{formatBRDate(item.data_evento)}</div>
+                                   <div className="mt-1 text-sm text-neutral-500">{item.reservasFinanceiras} reserva(s) financeira(s) aprovada(s)</div>
+                                 </div>
+ 
+                                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                   <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                                     <div className="text-xs text-emerald-700">Total de sinais do evento</div>
+                                     <div className="mt-1 text-lg font-semibold text-emerald-900">{formatCurrencyBR(item.totalSinais)}</div>
+                                   </div>
+ 
+                                   <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+                                     <div className="text-xs text-blue-700">Falta receber na hora</div>
+                                     <div className="mt-1 text-lg font-semibold text-blue-900">{formatCurrencyBR(item.totalFaltaReceber)}</div>
+                                   </div>
+                                 </div>
+                               </div>
+                             </div>
+                           ))
+                         )}
+                       </div>
+                     </Section>
+                   </>
+                 ) : financeTab === 'bebidas' ? (
+                   <>
+                     <Section
+                       title="Relatório de bebidas de cortesia"
+                       subtitle="Modelo operacional para separar bebidas destinadas às reservas aprovadas de cortesia/aniversário."
+                       right={
+                         <button
+                           onClick={exportarRelatorioBebidas}
+                           className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+                         >
+                           Exportar PDF
+                         </button>
+                       }
+                     >
+                       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                         <StatCard title="Reservas com bebida" value={computed.bebidasCortesia.length} />
+                         <StatCard title="Cortesias aprovadas" value={computed.cortesiasAprovadas.length} />
+                         <StatCard
+                           title="Aniversários"
+                           value={computed.bebidasCortesia.filter((r) => normLower(r.tipo) === 'aniversario').length}
+                         />
+                         <StatCard
+                           title="Cortesias"
+                           value={computed.bebidasCortesia.filter((r) => normLower(r.tipo) === 'cortesia').length}
+                         />
+                       </div>
+                     </Section>
+ 
+                     <Section title="Bebidas destinadas" subtitle="Espaço, nome do cliente, tipo e bebida destinada.">
+                       <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
+                         <table className="min-w-full bg-white text-sm">
+                           <thead className="bg-neutral-50">
+   <tr className="text-left text-neutral-600">
+     <th className="px-4 py-3 font-semibold whitespace-nowrap">Data</th>
+     <th className="px-4 py-3 font-semibold whitespace-nowrap">Espaço</th>
+     <th className="px-4 py-3 font-semibold min-w-[220px]">Nome do cliente</th>
+     <th className="px-4 py-3 font-semibold whitespace-nowrap">Tipo</th>
+     <th className="px-4 py-3 font-semibold min-w-[180px]">Bebida destinada</th>
+     <th className="px-4 py-3 font-semibold min-w-[240px]">Anotações</th>
+   </tr>
+ </thead>
+                           <tbody>
+                             {computed.bebidasCortesia.length === 0 ? (
+                               <tr>
+                                 <td colSpan={6} className="px-4 py-6 text-center text-neutral-500">
+                                   Nenhuma bebida de cortesia/aniversário encontrada no período atual.
+                                 </td>
+                               </tr>
+                             ) : (
+                               computed.bebidasCortesia.map((r) => (
+                                 <tr key={String(r.id)} className="border-t border-neutral-200">
+   <td className="px-4 py-3 whitespace-nowrap">{formatBRDate(r.data_evento)}</td>
+   <td className="px-4 py-3 font-medium text-neutral-900 whitespace-nowrap">{displayEspacoCompleto(r.espaco_id)}</td>
+   <td className="px-4 py-3 min-w-[220px]">{r.nome}</td>
+   <td className="px-4 py-3 whitespace-nowrap">{labelTipo(r.tipo)}</td>
+   <td className="px-4 py-3 min-w-[180px] font-semibold text-orange-700">{r.bebida_cortesia || '—'}</td>
+   <td className="px-4 py-3 min-w-[240px] text-neutral-300">________________________________</td>
+ </tr>
+                               ))
+                             )}
+                           </tbody>
+                         </table>
+                       </div>
+                     </Section>
+                   </>
+                 ) : financeTab === 'anexos' ? (
+                   <>
                     <Section
-                      title="Relatório de bebidas de cortesia"
-                      subtitle="Modelo operacional para separar bebidas destinadas às reservas aprovadas de cortesia/aniversário."
+                      title="Exportar Comprovantes de Sinal"
+                      subtitle="Gera um PDF consolidado com as imagens de todos os comprovantes anexados no período."
                       right={
                         <button
-                          onClick={exportarRelatorioBebidas}
+                          onClick={exportarRelatorioAnexos}
                           className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
                         >
-                          Exportar PDF
+                          Gerar PDF de Comprovantes
                         </button>
                       }
                     >
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                        <StatCard title="Reservas com bebida" value={computed.bebidasCortesia.length} />
-                        <StatCard title="Cortesias aprovadas" value={computed.cortesiasAprovadas.length} />
-                        <StatCard
-                          title="Aniversários"
-                          value={computed.bebidasCortesia.filter((r) => normLower(r.tipo) === 'aniversario').length}
-                        />
-                        <StatCard
-                          title="Cortesias"
-                          value={computed.bebidasCortesia.filter((r) => normLower(r.tipo) === 'cortesia').length}
-                        />
+                      <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-6 text-center">
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-600">
+                          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                          </svg>
+                        </div>
+                        <h3 className="mt-4 text-sm font-semibold text-neutral-900">Relatório de Imagens</h3>
+                        <p className="mt-1 text-sm text-neutral-500">
+                          Este relatório buscará todas as fotos de depósitos e transferências anexadas às reservas aprovadas do período selecionado ({periodoLabel}).
+                        </p>
+                        <div className="mt-6 flex justify-center">
+                          <button
+                            onClick={exportarRelatorioAnexos}
+                            className="rounded-xl border border-neutral-200 bg-white px-6 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50"
+                          >
+                            Clique aqui para iniciar a geração do arquivo
+                          </button>
+                        </div>
                       </div>
                     </Section>
-
-                    <Section title="Bebidas destinadas" subtitle="Espaço, nome do cliente, tipo e bebida destinada.">
-                      <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
-                        <table className="min-w-full bg-white text-sm">
-                          <thead className="bg-neutral-50">
-  <tr className="text-left text-neutral-600">
-    <th className="px-4 py-3 font-semibold whitespace-nowrap">Data</th>
-    <th className="px-4 py-3 font-semibold whitespace-nowrap">Espaço</th>
-    <th className="px-4 py-3 font-semibold min-w-[220px]">Nome do cliente</th>
-    <th className="px-4 py-3 font-semibold whitespace-nowrap">Tipo</th>
-    <th className="px-4 py-3 font-semibold min-w-[180px]">Bebida destinada</th>
-    <th className="px-4 py-3 font-semibold min-w-[240px]">Anotações</th>
-  </tr>
-</thead>
-                          <tbody>
-                            {computed.bebidasCortesia.length === 0 ? (
-                              <tr>
-                                <td colSpan={6} className="px-4 py-6 text-center text-neutral-500">
-                                  Nenhuma bebida de cortesia/aniversário encontrada no período atual.
-                                </td>
-                              </tr>
-                            ) : (
-                              computed.bebidasCortesia.map((r) => (
-                                <tr key={String(r.id)} className="border-t border-neutral-200">
-  <td className="px-4 py-3 whitespace-nowrap">{formatBRDate(r.data_evento)}</td>
-  <td className="px-4 py-3 font-medium text-neutral-900 whitespace-nowrap">{displayEspacoCompleto(r.espaco_id)}</td>
-  <td className="px-4 py-3 min-w-[220px]">{r.nome}</td>
-  <td className="px-4 py-3 whitespace-nowrap">{labelTipo(r.tipo)}</td>
-  <td className="px-4 py-3 min-w-[180px] font-semibold text-orange-700">{r.bebida_cortesia || '—'}</td>
-  <td className="px-4 py-3 min-w-[240px] text-neutral-300">________________________________</td>
-</tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </Section>
-                  </>
-                ) : null}
+                   </>
+                 ) : null}
               </>
             ) : null}
           </>
@@ -2469,15 +2712,25 @@ async function exportarRelatorioCobranca() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {reservaSelecionada.comprovante_url ? (
                   <button
                     onClick={() => abrirComprovante(reservaSelecionada)}
                     className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
                   >
-                    Ver anexo
+                    Anexo Original
                   </button>
                 ) : null}
+
+                {reservaSelecionada.comprovantes_extras?.map((path, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => abrirComprovante(reservaSelecionada, path)}
+                    className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                  >
+                    Anexo Extra {idx + 1}
+                  </button>
+                ))}
 
                 <button
                   onClick={fecharDetalhesReserva}
@@ -2735,6 +2988,15 @@ async function exportarRelatorioCobranca() {
                         />
                       </div>
 
+                      <div>
+                        <label className="text-neutral-500 text-xs uppercase tracking-wider font-semibold">Novo anexo (comprovante extra)</label>
+                        <input
+                          type="file"
+                          onChange={(e) => setAddSinalArquivo(e.target.files?.[0] || null)}
+                          className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-neutral-400"
+                        />
+                      </div>
+
                       <button
                         onClick={adicionarAoSinalReserva}
                         disabled={updatingId === String(reservaSelecionada.id)}
@@ -2794,6 +3056,10 @@ async function exportarRelatorioCobranca() {
 
                               {log.detalhes?.espaco_id ? (
                                 <p className="mt-1 text-xs text-neutral-400">Espaço: {log.detalhes.espaco_id}</p>
+                              ) : null}
+
+                              {log.detalhes?.descricao ? (
+                                <p className="mt-1 text-xs text-neutral-600 italic">“{log.detalhes.descricao}”</p>
                               ) : null}
                             </div>
 
