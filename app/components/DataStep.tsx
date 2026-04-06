@@ -70,7 +70,11 @@ export function DataStep({
             className={INPUT_CLASS}
           />
 
-          {modoSomenteNaHora ? (
+          {isAdmin ? (
+            <p className="mt-2 text-xs leading-5 text-emerald-300">
+              🛡️ Modo Administrador: você pode solicitar e alterar qualquer reserva, inclusive em datas passadas.
+            </p>
+          ) : modoSomenteNaHora ? (
             <p className="mt-2 text-xs leading-5 text-sky-200">
               ℹ️ Para a data operacional atual, o sistema permite somente venda na hora.
             </p>

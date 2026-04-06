@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 
 type Status =
@@ -787,6 +787,7 @@ const [novoPrecoOrdem, setNovoPrecoOrdem] = useState('')
   const [editMode, setEditMode] = useState(false)
   const [editNome, setEditNome] = useState('')
   const [editTelefone, setEditTelefone] = useState('')
+  const [editData, setEditData] = useState('')
   const [editTipo, setEditTipo] = useState<Tipo>('venda')
   const [editStatus, setEditStatus] = useState<Status>('pendente')
   const [editModeloPreco, setEditModeloPreco] = useState('')
@@ -828,6 +829,33 @@ const [novoPrecoOrdem, setNovoPrecoOrdem] = useState('')
 
     checkAccess()
   }, [router])
+
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    if (authChecking) return
+
+    const id = searchParams.get('id')
+    const data = searchParams.get('data')
+
+    if (id && data) {
+      setMainTab('historico')
+      setDataInicial(data)
+      setDataFinal(data)
+      
+      // Pequeno delay para garantir que fetchReservas rodou
+      setTimeout(async () => {
+        const { data: res, error } = await supabase
+          .from('reservas')
+          .select('*')
+          .eq('id', id)
+          .single()
+        
+        if (!error && res) {
+          abrirDetalhesReserva(res as ReservaRow)
+        }
+      }, 500)
+    }
+  }, [authChecking, searchParams])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -1165,6 +1193,7 @@ async function salvarPreco(row: ConfigPrecoRow) {
   function popularFormularioEdicao(r: ReservaRow) {
     setEditNome(String(r.nome ?? ''))
     setEditTelefone(String(r.telefone ?? ''))
+    setEditData(r.data_evento)
     setEditTipo((normLower(r.tipo) || 'venda') as Tipo)
     setEditStatus((normLower(r.status) || 'pendente') as Status)
     setEditModeloPreco(String(r.modelo_preco ?? ''))
@@ -1347,6 +1376,7 @@ async function salvarPreco(row: ConfigPrecoRow) {
       const payload = {
         nome,
         telefone,
+        data_evento: editData,
         tipo,
         status,
         modelo_preco: isTipoFinanceiro(tipo) ? modeloPreco : null,
@@ -2836,6 +2866,16 @@ async function exportarRelatorioAnexos() {
                       <input
                         value={editTelefone}
                         onChange={(e) => setEditTelefone(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-neutral-500">Data do evento</label>
+                      <input
+                        type="date"
+                        value={editData}
+                        onChange={(e) => setEditData(e.target.value)}
                         className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
                       />
                     </div>

@@ -142,17 +142,19 @@ const dataSelecionadaEhOperacionalAtual = useMemo(() => {
 }, [dataEvento, dataEventoOperacional])
 
 const modoSomenteNaHora = useMemo(() => {
+  if (isAdmin) return false
   return vendaNaHoraAtiva && dataSelecionadaEhOperacionalAtual
-}, [vendaNaHoraAtiva, dataSelecionadaEhOperacionalAtual])
+}, [vendaNaHoraAtiva, dataSelecionadaEhOperacionalAtual, isAdmin])
 
 const vendaAntecipadaLiberada = useMemo(() => {
-  return !modoSomenteNaHora
-}, [modoSomenteNaHora])
+  return isAdmin || !modoSomenteNaHora
+}, [modoSomenteNaHora, isAdmin])
 
 const isReadOnlyHistorico = useMemo(() => {
+  if (isAdmin) return false
   if (modoSomenteNaHora) return false
   return isPastDateISO(dataEvento)
-}, [dataEvento, modoSomenteNaHora])
+}, [dataEvento, modoSomenteNaHora, isAdmin])
 
   const mostrarCampoBebida = tipoReserva === 'ANIVERSARIO' || tipoReserva === 'CORTESIA'
 
@@ -865,7 +867,7 @@ const isReadOnlyHistorico = useMemo(() => {
   }
 
   function openReservaModal(espacoId: string) {
-    if (isReadOnlyHistorico) {
+    if (isReadOnlyHistorico && !isAdmin) {
       alert('Data passada: modo histórico. Não é possível solicitar reservas.')
       return
     }
@@ -906,7 +908,7 @@ const isReadOnlyHistorico = useMemo(() => {
     const r = reservaPorEspaco.get(id)
     const reservado = !!r
 
-    if (isReadOnlyHistorico) {
+    if (isReadOnlyHistorico && !isAdmin) {
       if (reservado) openDetailsModal(r)
       else alert('Espaço livre (histórico).')
       return
@@ -968,7 +970,7 @@ const isReadOnlyHistorico = useMemo(() => {
     async function submitReserva(e: React.FormEvent) {
     e.preventDefault()
 
-    if (isReadOnlyHistorico) {
+    if (isReadOnlyHistorico && !isAdmin) {
       alert('Data passada: não é possível solicitar reserva.')
       return
     }
@@ -1508,9 +1510,22 @@ const dataEventoFinal = dataEvento
                       </p>
                     </div>
 
-                    <button onClick={closeDetailsModal} className={`${PRIMARY_BTN} w-full sm:w-auto`}>
-                      Fechar
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {isAdmin && (
+                        <button
+                          onClick={() => {
+                            closeDetailsModal()
+                            router.push(`/admin?id=${detailsReserva.id}&data=${detailsReserva.data_evento}`)
+                          }}
+                          className={`${SECONDARY_BTN} w-full sm:w-auto px-6`}
+                        >
+                          Editar
+                        </button>
+                      )}
+                      <button onClick={closeDetailsModal} className={`${PRIMARY_BTN} w-full sm:w-auto`}>
+                        Fechar
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-3 text-sm">
@@ -1654,9 +1669,9 @@ const dataEventoFinal = dataEvento
                         <option value="VENDA" disabled={!vendaAntecipadaLiberada}>
                           Venda antecipada
                         </option>
-                        {modoSomenteNaHora ? (
+                        {(isAdmin || modoSomenteNaHora) && (
                           <option value="NA_HORA">Venda na hora</option>
-                        ) : null}
+                        )}
                       </select>
                     </div>
 
