@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import React, { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import { VALID_IDS } from '@/app/utils/constants'
 
 type Status =
   | 'pendente'
@@ -795,6 +796,7 @@ const [novoPrecoOrdem, setNovoPrecoOrdem] = useState('')
   const [editModeloPreco, setEditModeloPreco] = useState('')
   const [editValorEspaco, setEditValorEspaco] = useState('')
   const [editValorSinal, setEditValorSinal] = useState('')
+  const [editEspacoId, setEditEspacoId] = useState('')
   const [editObservacao, setEditObservacao] = useState('')
   const [addSinalValor, setAddSinalValor] = useState('')
   const [addSinalArquivo, setAddSinalArquivo] = useState<File | null>(null)
@@ -1201,6 +1203,7 @@ async function salvarPreco(row: ConfigPrecoRow) {
     setEditModeloPreco(String(r.modelo_preco ?? ''))
     setEditValorEspaco(r.valor_espaco != null ? String(r.valor_espaco) : '')
     setEditValorSinal(r.valor_sinal != null ? String(r.valor_sinal) : '')
+    setEditEspacoId(String(r.espaco_id ?? '').toLowerCase())
     setEditObservacao(String(r.observacao ?? ''))
     setAddSinalValor('')
   }
@@ -1309,6 +1312,7 @@ async function salvarPreco(row: ConfigPrecoRow) {
     const telefone = onlyDigits(editTelefone)
     const tipo = normLower(editTipo)
     let status = normLower(editStatus)
+    const espacoIdNovo = editEspacoId.trim().toLowerCase()
     const modeloPreco = editModeloPreco.trim() || null
     const observacao = editObservacao.trim() || null
 
@@ -1375,10 +1379,36 @@ async function salvarPreco(row: ConfigPrecoRow) {
     setUpdatingId(idStr)
 
     try {
+      // Validar colisão se o espaço ou a data mudaram
+      if (espacoIdNovo !== String(reservaSelecionada.espaco_id).toLowerCase() || editData !== reservaSelecionada.data_evento) {
+        const { data: conflitos, error: confErr } = await supabase
+          .from('reservas')
+          .select('id, nome')
+          .eq('data_evento', editData)
+          .eq('espaco_id', espacoIdNovo)
+          .in('status', ['pendente', 'aprovado_venda', 'aprovado_na_hora', 'aprovado_cortesia'])
+          .neq('id', reservaSelecionada.id)
+          .limit(1)
+
+        if (confErr) {
+          console.error('Erro ao validar conflito:', confErr)
+        } else if (conflitos && conflitos.length > 0) {
+          const conf = conflitos[0]
+          const confirmarConflito = window.confirm(
+            `Atenção: O espaço ${displayLocal(espacoIdNovo)} já possui uma reserva ativa para ${conf.nome} nesta data. Deseja mover mesmo assim e gerar um overbooking?`
+          )
+          if (!confirmarConflito) {
+            setUpdatingId(null)
+            return
+          }
+        }
+      }
+
       const payload = {
         nome,
         telefone,
         data_evento: editData,
+        espaco_id: espacoIdNovo,
         tipo,
         status,
         modelo_preco: isTipoFinanceiro(tipo) ? modeloPreco : null,
@@ -2853,7 +2883,41 @@ async function exportarRelatorioAnexos() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-3 text-sm">
+                  <div className="space-y-4 text-sm">
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Mudar Espaço (Mesa/Camarote)</label>
+                      <select
+                        value={editEspacoId}
+                        onChange={(e) => setEditEspacoId(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 outline-none focus:border-neutral-400"
+                      >
+                        <optgroup label="Camarotes">
+                          {VALID_IDS.filter((id) => isCamarote(id)).map((id) => (
+                            <option key={id} value={id}>
+                              {displayEspacoCompleto(id)}
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="Mesas">
+                          {VALID_IDS.filter((id) => isMesa(id)).map((id) => (
+                            <option key={id} value={id}>
+                              {displayEspacoCompleto(id)}
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="Outros / Custom">
+                           {!VALID_IDS.includes(editEspacoId) && (
+                             <option value={editEspacoId}>{editEspacoId.toUpperCase()} (Atual)</option>
+                           )}
+                           {VALID_IDS.filter((id) => !isMesa(id) && !isCamarote(id)).map((id) => (
+                            <option key={id} value={id}>
+                              {displayEspacoCompleto(id)}
+                            </option>
+                          ))}
+                        </optgroup>
+                      </select>
+                    </div>
+
                     <div>
                       <label className="text-neutral-500">Nome</label>
                       <input
