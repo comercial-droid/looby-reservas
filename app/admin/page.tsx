@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -732,7 +732,7 @@ function ReservationCard({
   )
 }
 
-export default function AdminPage() {
+function AdminContent() {
   const router = useRouter()
 
   const [mainTab, setMainTab] = useState<'pendentes' | 'historico' | 'financeiro' | 'configuracoes'>('pendentes')
@@ -3227,3 +3227,11 @@ async function exportarRelatorioAnexos() {
     </div>
   )
 }
+
+export default function AdminPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminContent />
+    </Suspense>
+  )
+}
