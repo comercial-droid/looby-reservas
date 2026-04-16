@@ -44,10 +44,15 @@ export async function GET(req: NextRequest) {
     const ultimaReserva = reservas30Dias && reservas30Dias.length > 0 ? reservas30Dias[0].data_evento : null
 
     // 2. Buscar benefício de aniversário (em todo o histórico)
+    // Consideramos usado se:
+    // - A coluna usouBeneficioAniversario for true OR
+    // - O tipo da reserva for 'aniversario' (para compatibilidade com reservas antigas)
+    // Ignoramos reservas canceladas.
     let queryBeneficio = supabase
       .from('reservas')
-      .select('id, data_evento, usouBeneficioAniversario')
-      .eq('usouBeneficioAniversario', true)
+      .select('id, data_evento, usouBeneficioAniversario, tipo')
+      .neq('status', 'cancelado')
+      .or('usouBeneficioAniversario.eq.true, tipo.ilike.aniversario')
       .order('data_evento', { ascending: false })
       .limit(1)
 
