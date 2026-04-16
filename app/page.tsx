@@ -106,6 +106,17 @@ export default function Home() {
   const [anexoObs, setAnexoObs] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
 
+  const [historicoCliente, setHistoricoCliente] = useState<{
+    clienteEncontrado: boolean
+    reservasUltimos30Dias: number
+    dataUltimaReserva: string
+    jaUsouBeneficioAniversario: boolean
+    dataUltimoBeneficio: string
+    mensagemHistorico: string
+    mensagemBeneficio: string | null
+  } | null>(null)
+  const [loadingHistorico, setLoadingHistorico] = useState(false)
+
   const [reservasDia, setReservasDia] = useState<ReservaRow[]>([])
   const [loadingReservas, setLoadingReservas] = useState(false)
 
@@ -407,6 +418,34 @@ const isReadOnlyHistorico = useMemo(() => {
       setBebidaCortesia(opcoesBebida[0] || 'sem bebida')
     }
   }, [mostrarCampoBebida, opcoesBebida, bebidaCortesia])
+
+  useEffect(() => {
+    const d = onlyDigits(telefone)
+    if (d.length >= 10) {
+      const controller = new AbortController()
+      const fetchHistorico = async () => {
+        setLoadingHistorico(true)
+        try {
+          const res = await fetch(`/api/clientes/historico?telefone=${encodeURIComponent(telefone)}`, {
+            signal: controller.signal,
+          })
+          if (!res.ok) throw new Error('Falha na busca')
+          const data = await res.json()
+          setHistoricoCliente(data)
+        } catch (err: any) {
+          if (err.name !== 'AbortError') {
+            console.error('Erro ao buscar histórico:', err)
+          }
+        } finally {
+          setLoadingHistorico(false)
+        }
+      }
+      fetchHistorico()
+      return () => controller.abort()
+    } else {
+      setHistoricoCliente(null)
+    }
+  }, [telefone])
 
   async function carregarReservasDoDia(dateISO: string) {
     setLoadingReservas(true)
@@ -883,6 +922,7 @@ const isReadOnlyHistorico = useMemo(() => {
     setBebidaCortesia(opcoesBebida[0] || 'sem bebida')
     setObservacao('')
     setAnexoObs(null)
+    setHistoricoCliente(null)
     setModalOpen(true)
   }
 
@@ -1654,7 +1694,36 @@ const dataEventoFinal = dataEvento
                         value={telefone}
                         onChange={(e) => setTelefone(e.target.value)}
                         className={INPUT_CLASS}
+                        placeholder="(00) 00000-0000"
                       />
+                      {loadingHistorico && (
+                        <p className="mt-1 text-xs text-red-50/50">Consultando histórico...</p>
+                      )}
+                      {historicoCliente && (
+                        <div className="mt-3 space-y-2">
+                          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-white">
+                              <span className="h-2 w-2 rounded-full bg-blue-400"></span>
+                              Histórico do cliente
+                            </div>
+                            <p className="mt-1 text-xs leading-relaxed text-red-50/80">
+                              {historicoCliente.mensagemHistorico}
+                            </p>
+                          </div>
+
+                          {historicoCliente.jaUsouBeneficioAniversario && (
+                            <div className="rounded-xl border border-orange-400/30 bg-orange-400/10 p-3">
+                              <div className="flex items-center gap-2 text-xs font-bold text-orange-300">
+                                <span className="h-2 w-2 rounded-full bg-orange-400"></span>
+                                Atenção
+                              </div>
+                              <p className="mt-1 text-xs leading-relaxed text-orange-100">
+                                {historicoCliente.mensagemBeneficio}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div>

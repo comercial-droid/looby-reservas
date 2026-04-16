@@ -801,6 +801,17 @@ const [novoPrecoOrdem, setNovoPrecoOrdem] = useState('')
   const [addSinalValor, setAddSinalValor] = useState('')
   const [addSinalArquivo, setAddSinalArquivo] = useState<File | null>(null)
 
+  const [historicoCliente, setHistoricoCliente] = useState<{
+    clienteEncontrado: boolean
+    reservasUltimos30Dias: number
+    dataUltimaReserva: string
+    jaUsouBeneficioAniversario: boolean
+    dataUltimoBeneficio: string
+    mensagemHistorico: string
+    mensagemBeneficio: string | null
+  } | null>(null)
+  const [loadingHistorico, setLoadingHistorico] = useState(false)
+
   const periodoLabel = useMemo(() => formatPeriodoLabel(dataInicial, dataFinal), [dataInicial, dataFinal])
 
   useEffect(() => {
@@ -1194,6 +1205,25 @@ async function salvarPreco(row: ConfigPrecoRow) {
     setLoadingLogs(false)
   }
 
+  async function fetchHistoricoCliente(telefone: string, nome: string) {
+    if (!telefone && !nome) return
+    setLoadingHistorico(true)
+    try {
+      const params = new URLSearchParams()
+      if (telefone) params.append('telefone', telefone)
+      if (nome) params.append('nome', nome)
+
+      const res = await fetch(`/api/clientes/historico?${params.toString()}`)
+      if (!res.ok) throw new Error('Falha ao buscar histórico')
+      const data = await res.json()
+      setHistoricoCliente(data)
+    } catch (err) {
+      console.error('Erro ao buscar histórico no admin:', err)
+    } finally {
+      setLoadingHistorico(false)
+    }
+  }
+
   function popularFormularioEdicao(r: ReservaRow) {
     setEditNome(String(r.nome ?? ''))
     setEditTelefone(String(r.telefone ?? ''))
@@ -1212,7 +1242,9 @@ async function salvarPreco(row: ConfigPrecoRow) {
     setReservaSelecionada(r)
     setDetailsOpen(true)
     setEditMode(false)
+    setHistoricoCliente(null)
     popularFormularioEdicao(r)
+    fetchHistoricoCliente(r.telefone, r.nome)
     await carregarLogsReserva(String(r.id))
   }
 
@@ -2802,6 +2834,38 @@ async function exportarRelatorioAnexos() {
                 </button>
               </div>
             </div>
+
+            {loadingHistorico && (
+              <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-3">
+                <p className="text-xs font-medium text-blue-700 animate-pulse">Consultando histórico do cliente...</p>
+              </div>
+            )}
+
+            {historicoCliente && (
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-sm font-bold text-blue-900">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] text-white">i</span>
+                    Histórico do cliente
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-blue-800">
+                    {historicoCliente.mensagemHistorico}
+                  </p>
+                </div>
+
+                {historicoCliente.jaUsouBeneficioAniversario && (
+                  <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4 shadow-sm">
+                    <div className="flex items-center gap-2 text-sm font-bold text-orange-900">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] text-white">!</span>
+                      Atenção Especial
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-orange-800 font-medium">
+                      {historicoCliente.mensagemBeneficio}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-3">
               <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 xl:col-span-1">
