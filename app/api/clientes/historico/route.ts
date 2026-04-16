@@ -28,10 +28,7 @@ export async function GET(req: NextRequest) {
       .order('data_evento', { ascending: false })
 
     if (telefone) {
-      query30Dias = query30Dias.eq('telefone', telefoneRaw) // Usando original format ou digits? 
-      // O projeto parece salvar telefone com formatação ou bruto? 
-      // Na Home (page.tsx) o estado telefone é string. 
-      // Vamos tentar pelo telefone bruto e formatado para garantir
+      query30Dias = query30Dias.eq('telefone', telefone) 
     } else {
       query30Dias = query30Dias.ilike('nome', `%${nomeRaw}%`)
     }
@@ -57,7 +54,7 @@ export async function GET(req: NextRequest) {
       .limit(1)
 
     if (telefone) {
-      queryBeneficio = queryBeneficio.eq('telefone', telefoneRaw)
+      queryBeneficio = queryBeneficio.eq('telefone', telefone)
     } else {
       queryBeneficio = queryBeneficio.ilike('nome', `%${nomeRaw}%`)
     }
