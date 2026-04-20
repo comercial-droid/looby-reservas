@@ -114,3 +114,98 @@ export function tipoPorId(id: string): 'MESA' | 'CAMAROTE' {
   if (x.startsWith('c')) return 'CAMAROTE'
   return 'MESA'
 }
+
+export function mascararTelefone(telefone: string) {
+  return (telefone || '').replace(/(\d{4})(?!.*\d)/, '****')
+}
+
+export function formatBRDate(dateISO: string) {
+  const [y, m, d] = String(dateISO).split('-').map(Number)
+  if (!y || !m || !d) return dateISO
+  return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`
+}
+
+export function displayLocal(espacoId: string) {
+  const id = (espacoId || '').trim().toUpperCase()
+  if (id.startsWith('M')) {
+    const n = id.replace('M', '')
+    // Se for um número puro como '01', mantém. Se for 'M1', vira '01'.
+    const num = n.replace(/\D/g, '')
+    return num.padStart(2, '0')
+  }
+  if (id.startsWith('C')) {
+    return id.replace('C', '')
+  }
+  return id
+}
+
+export function displayEspacoCompleto(espacoId: string) {
+  return `${tipoPorId(espacoId) === 'MESA' ? 'Mesa' : 'Camarote'} ${displayLocal(espacoId)}`
+}
+
+export function getTipoLabel(tipo: string) {
+  const t = (tipo || '').toUpperCase()
+  if (t === 'VENDA') return 'Venda antecipada'
+  if (t === 'NA_HORA') return 'Venda na hora'
+  if (t === 'ANIVERSARIO') return 'Aniversário'
+  if (t === 'CORTESIA') return 'Cortesia'
+  return t
+}
+
+export function gerarMensagemReserva(r: any) {
+  const data = formatBRDate(r.data_evento)
+  const telefoneMascarado = mascararTelefone(r.telefone)
+  const espacoLabel = displayEspacoCompleto(r.espaco_id)
+  
+  const tipoUpper = (r.tipo || '').toUpperCase()
+  const tipoLabel = getTipoLabel(r.tipo)
+  const isVenda = tipoUpper === 'VENDA' || tipoUpper === 'NA_HORA'
+
+  let msg = `*SOLICITAÇÃO DE RESERVA - LOOBY*
+
+Espaço: ${espacoLabel}
+Data: ${data}
+Nome completo: ${r.nome}
+Telefone (WhatsApp): ${telefoneMascarado}
+Tipo: ${tipoLabel}
+Bebida: ${r.bebida_cortesia || '—'}
+Observação: ${r.observacao || '—'}`
+
+  if (isVenda) {
+    msg += `
+Modelo de preço: ${r.modelo_preco || '—'}
+Valor do sinal adiantado: ${r.valor_sinal ? formatCurrencyBR(r.valor_sinal) : '—'}`
+  }
+
+  return msg
+}
+
+
+
+
+export function compartilharReservaWhatsApp(r: any) {
+  const mensagem = gerarMensagemReserva(r)
+  const mensagemCodificada = encodeURIComponent(mensagem)
+  const url = `https://wa.me/?text=${mensagemCodificada}`
+  window.open(url, '_blank')
+}
+
+export function toBRPhoneE164(phoneRaw: string) {
+  const d = (phoneRaw || '').replace(/\D/g, '')
+  if (!d) return ''
+  if (d.startsWith('55')) return d
+  return `55${d}`
+}
+
+export function contatarClienteWhatsApp(r: any) {
+  const phone = toBRPhoneE164(r.telefone)
+  if (!phone) return alert('Telefone inválido ou ausente.')
+  
+  const data = formatBRDate(r.data_evento)
+  const espacoLabel = displayEspacoCompleto(r.espaco_id)
+  
+  const msg = `Olá, ${r.nome}! Recebemos sua solicitação de reserva (${espacoLabel}) para o dia ${data} no Looby.\n\nAssim que aprovarmos, te avisamos por aqui.`
+  const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+  window.open(url, '_blank')
+}
+

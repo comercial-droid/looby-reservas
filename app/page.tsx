@@ -22,6 +22,10 @@ import {
   isJanelaVendaNaHora,
   getDataEventoOperacional,
   tipoPorId,
+  mascararTelefone,
+  compartilharReservaWhatsApp,
+  displayEspacoCompleto,
+  contatarClienteWhatsApp,
 } from './utils/helpers'
 import {
   PRECOS_CAMAROTE_FALLBACK,
@@ -95,6 +99,9 @@ export default function Home() {
   const [dataEvento, setDataEvento] = useState<string>(todayISO())
 
   const [modalOpen, setModalOpen] = useState(false)
+  const [showSuccessWpp, setShowSuccessWpp] = useState(false)
+  const [lastPayload, setLastPayload] = useState<any>(null)
+  
   const [nomeCompleto, setNomeCompleto] = useState('')
   const [telefone, setTelefone] = useState('')
   const [tipoReserva, setTipoReserva] = useState<ReservaTipo>('ANIVERSARIO')
@@ -105,6 +112,7 @@ export default function Home() {
   const [observacao, setObservacao] = useState('')
   const [anexoObs, setAnexoObs] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
+
 
   const [historicoCliente, setHistoricoCliente] = useState<{
     clienteEncontrado: boolean
@@ -930,6 +938,7 @@ const isReadOnlyHistorico = useMemo(() => {
     setModalOpen(false)
   }
 
+
   function openDetailsModal(reserva: ReservaRow) {
     setHighlightedId((reserva.espaco_id || '').toLowerCase())
     setDetailsReserva(reserva)
@@ -1199,14 +1208,14 @@ const dataEventoFinal = dataEvento
         const details = String(error?.details ?? '')
         const code = String(error?.code ?? '')
 
-       const isReservaDuplicada =
-  msg.includes('reservas_unicas_por_espaco_data') ||
-  details.includes('reservas_unicas_por_espaco_data') ||
-  msg.includes('reservas_unicas_por_espaco_data_ativas') ||
-  details.includes('reservas_unicas_por_espaco_data_ativas') ||
-  msg.includes('reservas_unique_data_espaco') ||
-  details.includes('reservas_unique_data_espaco') ||
-  code === '23505'
+        const isReservaDuplicada =
+          msg.includes('reservas_unicas_por_espaco_data') ||
+          details.includes('reservas_unicas_por_espaco_data') ||
+          msg.includes('reservas_unicas_por_espaco_data_ativas') ||
+          details.includes('reservas_unicas_por_espaco_data_ativas') ||
+          msg.includes('reservas_unique_data_espaco') ||
+          details.includes('reservas_unique_data_espaco') ||
+          code === '23505'
 
         if (isReservaDuplicada) {
           await carregarReservasDoDia(dataEventoFinal)
@@ -1224,10 +1233,13 @@ const dataEventoFinal = dataEvento
 
       closeReservaModal()
       await carregarReservasDoDia(dataEventoFinal)
-      alert('Solicitação enviada! Status: aguardando confirmação (amarelo).')
+      
+      setLastPayload(payload)
+      setShowSuccessWpp(true)
     } finally {
       setSaving(false)
     }
+
   }
 
   async function sair() {
@@ -1256,6 +1268,48 @@ const dataEventoFinal = dataEvento
 
   return (
     <div className="min-h-svh overflow-x-hidden bg-[radial-gradient(circle_at_top,#4f111a_0%,#18090c_45%,#090406_100%)] px-3 py-4 text-red-50 sm:px-4 sm:py-6">
+      {/* MODAL DE SUCESSO - WHATSAPP (FORA DO CONTEXTO DO MAPA PARA GARANTIR VISIBILIDADE) */}
+      {showSuccessWpp && lastPayload && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-md" />
+          <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-emerald-500/30 bg-[#0f172a] shadow-[0_0_50px_rgba(16,185,129,0.2)]">
+            <div className="bg-emerald-500/10 p-6 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+                <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-black text-white">SUCESSO!</h3>
+              <p className="mt-2 text-sm font-medium text-emerald-100/70 uppercase tracking-widest">Reserva Solicitada</p>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-center text-sm leading-6 text-neutral-300">
+                Agora compartilhe as informações no WhatsApp para que o cliente e a equipe fiquem cientes.
+              </p>
+              
+              <div className="mt-8 flex flex-col gap-3">
+                <button
+                  onClick={() => compartilharReservaWhatsApp(lastPayload)}
+                  className="group relative flex items-center justify-center gap-3 overflow-hidden rounded-xl bg-[#25D366] py-4 text-sm font-black uppercase tracking-wider text-white transition-all hover:bg-emerald-500 hover:shadow-[0_0_20px_rgba(37,211,102,0.4)] active:scale-95"
+                >
+                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.445 0 .01 5.437.01 12.045c0 2.112.552 4.174 1.6 6.012L0 24l6.135-1.61a11.826 11.826 0 005.915 1.57h.005c6.604 0 12.039-5.437 12.039-12.045 0-3.199-1.243-6.204-3.5-8.455z"/>
+                  </svg>
+                  <span>Abrir WhatsApp</span>
+                </button>
+                <button
+                  onClick={() => setShowSuccessWpp(false)}
+                  className="mt-2 py-2 text-xs font-bold uppercase tracking-widest text-neutral-500 transition-colors hover:text-white"
+                >
+                  Fechar Janela
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mx-auto max-w-[1400px]">
         <div className="mb-5 flex flex-col gap-4 border-b border-white/10 pb-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
@@ -1546,8 +1600,9 @@ const dataEventoFinal = dataEvento
                       <h2 className="text-xl font-semibold text-white">Detalhes da reserva</h2>
                       <p className="mt-1 text-sm leading-6 text-red-50/75">
                         Data: <b className="text-white">{dataEvento}</b> • Espaço:{' '}
-                        <b className="text-white">{detailsReserva.espaco_id}</b>
+                        <b className="text-white">{displayEspacoCompleto(detailsReserva.espaco_id)}</b>
                       </p>
+
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -1593,9 +1648,10 @@ const dataEventoFinal = dataEvento
                       <div className="flex justify-between gap-3">
                         <span className="text-red-50/60">Telefone</span>
                         <span className="text-right text-white">
-                          {isAdmin ? detailsReserva.telefone : formatBRPhoneMasked(detailsReserva.telefone)}
+                          {isAdmin ? detailsReserva.telefone : mascararTelefone(detailsReserva.telefone)}
                         </span>
                       </div>
+
 
                       {(detailsReserva.tipo?.toLowerCase() === 'venda' || detailsReserva.tipo?.toLowerCase() === 'na_hora') ? (
                         <>
@@ -1634,7 +1690,28 @@ const dataEventoFinal = dataEvento
                       </div>
                     </div>
 
-                    <div className="text-xs leading-5 text-red-50/55">
+                    <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {(isAdmin || (userId && detailsReserva.user_id === userId)) ? (
+                        <button
+                          onClick={() => compartilharReservaWhatsApp(detailsReserva)}
+                          className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-sm font-bold text-white transition hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                          Compartilhar Info
+                        </button>
+                      ) : null}
+
+                      {isAdmin && (
+                        <button
+                          onClick={() => contatarClienteWhatsApp(detailsReserva)}
+                          className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-400 transition hover:bg-emerald-500/20"
+                        >
+                          Contatar Cliente
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="text-xs leading-5 text-red-50/55 pt-2">
+
                       * Em usuário comum, telefone e observação ficam protegidos. No admin você vê tudo.
                     </div>
                   </div>
@@ -1673,177 +1750,177 @@ const dataEventoFinal = dataEvento
 
                   {modoSomenteNaHora ? (
                     <div className="mb-4 rounded-xl border border-sky-300/25 bg-sky-400/10 p-3 text-sm text-sky-100">
-                      Esta solicitação será registrada como <b>venda na hora</b> para o evento de{' '}
                       <b>{dataEventoOperacional}</b>.
                     </div>
                   ) : null}
 
                   <form className="space-y-4" onSubmit={submitReserva}>
-                    <div>
-                      <label className={LABEL_CLASS}>Nome completo</label>
-                      <input
-                        value={nomeCompleto}
-                        onChange={(e) => setNomeCompleto(e.target.value)}
-                        className={INPUT_CLASS}
-                      />
-                    </div>
+                      {/* ... existing form ... */}
+                      <div>
+                        <label className={LABEL_CLASS}>Nome completo</label>
+                        <input
+                          value={nomeCompleto}
+                          onChange={(e) => setNomeCompleto(e.target.value)}
+                          className={INPUT_CLASS}
+                        />
+                      </div>
 
-                    <div>
-                      <label className={LABEL_CLASS}>Telefone (WhatsApp)</label>
-                      <input
-                        value={telefone}
-                        onChange={(e) => setTelefone(e.target.value)}
-                        className={INPUT_CLASS}
-                        placeholder="(00) 00000-0000"
-                      />
-                      {loadingHistorico && (
-                        <p className="mt-1 text-xs text-red-50/50">Consultando histórico...</p>
-                      )}
-                      {historicoCliente && (
-                        <div className="mt-3 space-y-2">
-                          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                            <div className="flex items-center gap-2 text-xs font-semibold text-white">
-                              <span className="h-2 w-2 rounded-full bg-blue-400"></span>
-                              Histórico do cliente
-                            </div>
-                            <p className="mt-1 text-xs leading-relaxed text-red-50/80">
-                              {historicoCliente.mensagemHistorico}
-                            </p>
-                          </div>
-
-                          {historicoCliente.jaUsouBeneficioAniversario && (
-                            <div className="rounded-xl border border-orange-400/30 bg-orange-400/10 p-3">
-                              <div className="flex items-center gap-2 text-xs font-bold text-orange-300">
-                                <span className="h-2 w-2 rounded-full bg-orange-400"></span>
-                                Atenção
+                      <div>
+                        <label className={LABEL_CLASS}>Telefone (WhatsApp)</label>
+                        <input
+                          value={telefone}
+                          onChange={(e) => setTelefone(e.target.value)}
+                          className={INPUT_CLASS}
+                          placeholder="(00) 00000-0000"
+                        />
+                        {loadingHistorico && (
+                          <p className="mt-1 text-xs text-red-50/50">Consultando histórico...</p>
+                        )}
+                        {historicoCliente && (
+                          <div className="mt-3 space-y-2">
+                            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                              <div className="flex items-center gap-2 text-xs font-semibold text-white">
+                                <span className="h-2 w-2 rounded-full bg-blue-400"></span>
+                                Histórico do cliente
                               </div>
-                              <p className="mt-1 text-xs leading-relaxed text-orange-100">
-                                {historicoCliente.mensagemBeneficio}
+                              <p className="mt-1 text-xs leading-relaxed text-red-50/80">
+                                {historicoCliente.mensagemHistorico}
                               </p>
                             </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
 
-                    <div>
-                      <label className={LABEL_CLASS}>Tipo</label>
-                      <select
-                        value={tipoReserva}
-                        onChange={(e) => setTipoReserva(e.target.value as ReservaTipo)}
-                        className={INPUT_CLASS}
-                      >
-                        <option value="ANIVERSARIO">Aniversário</option>
-                        <option value="CORTESIA">Cortesia</option>
-                        <option value="VENDA" disabled={!vendaAntecipadaLiberada}>
-                          Venda antecipada
-                        </option>
-                        {(isAdmin || modoSomenteNaHora) && (
-                          <option value="NA_HORA">Venda na hora</option>
+                            {historicoCliente.jaUsouBeneficioAniversario && (
+                              <div className="rounded-xl border border-orange-400/30 bg-orange-400/10 p-3">
+                                <div className="flex items-center gap-2 text-xs font-bold text-orange-300">
+                                  <span className="h-2 w-2 rounded-full bg-orange-400"></span>
+                                  Atenção
+                                </div>
+                                <p className="mt-1 text-xs leading-relaxed text-orange-100">
+                                  {historicoCliente.mensagemBeneficio}
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         )}
-                      </select>
-                    </div>
+                      </div>
 
-                    {mostrarCampoBebida ? (
                       <div>
-                        <label className={LABEL_CLASS}>Bebida</label>
+                        <label className={LABEL_CLASS}>Tipo</label>
                         <select
-                          value={bebidaCortesia}
-                          onChange={(e) => setBebidaCortesia(e.target.value)}
+                          value={tipoReserva}
+                          onChange={(e) => setTipoReserva(e.target.value as ReservaTipo)}
                           className={INPUT_CLASS}
                         >
-                          {opcoesBebida.map((opcao) => (
-                            <option key={opcao} value={opcao}>
-                              {opcao}
-                            </option>
-                          ))}
-                        </select>
-                        <p className={`mt-1 text-xs leading-5 ${MUTED_TEXT}`}>
-                          Selecione a bebida vinculada à cortesia/aniversário.
-                        </p>
-                      </div>
-                    ) : null}
-
-                    {modeloPrecoObrigatorio ? (
-                      <div>
-                        <label className={LABEL_CLASS}>Modelo de preço</label>
-                        <select
-                          value={modeloPreco}
-                          onChange={(e) => setModeloPreco(e.target.value)}
-                          className={INPUT_CLASS}
-                        >
-                          <option value="">Selecione</option>
-
-                          {(isCamarote ? precosCamarote : precosMesa).map((p) => (
-                            <option key={p.id} value={p.nome_modelo}>
-                              {p.nome_modelo}
-                            </option>
-                          ))}
+                          <option value="ANIVERSARIO">Aniversário</option>
+                          <option value="CORTESIA">Cortesia</option>
+                          <option value="VENDA" disabled={!vendaAntecipadaLiberada}>
+                            Venda antecipada
+                          </option>
+                          {(isAdmin || modoSomenteNaHora) && (
+                            <option value="NA_HORA">Venda na hora</option>
+                          )}
                         </select>
                       </div>
-                    ) : null}
 
-                    {valorSinalObrigatorio ? (
-                      <div>
-                        <label className={LABEL_CLASS}>Valor do sinal adiantado</label>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          min="0"
-                          step="0.01"
-                          value={valorSinal}
-                          onChange={(e) => setValorSinal(e.target.value)}
-                          className={INPUT_CLASS}
-                          placeholder="Ex: 300.00"
-                        />
-                        <p className={`mt-1 text-xs leading-5 ${MUTED_TEXT}`}>
-                          Informe apenas o valor já pago antecipadamente.
-                        </p>
-                      </div>
-                    ) : null}
-
-                    <div>
-                      <label className={LABEL_CLASS}>Observação (obrigatório)</label>
-                      <textarea
-                        value={observacao}
-                        onChange={(e) => setObservacao(e.target.value.slice(0, 200))}
-                        maxLength={200}
-                        className="mt-1 min-h-[110px] w-full rounded-xl border border-red-950/40 bg-white/95 px-3 py-3 text-[16px] text-neutral-900 outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-700/20"
-                        placeholder="Até 200 caracteres (ou anexe um arquivo)."
-                      />
-                      <p className={`mt-1 text-xs ${MUTED_TEXT}`}>{observacao.length}/200</p>
-                    </div>
-
-                    <div>
-                      <label className={LABEL_CLASS}>Anexo da observação (opcional)</label>
-                      <input
-                        type="file"
-                        accept="image/*,application/pdf"
-                        onChange={(e) => setAnexoObs(e.target.files?.[0] ?? null)}
-                        className="mt-2 block w-full text-sm text-red-50/80 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-3 file:font-semibold file:text-[#5b1019] hover:file:bg-red-50"
-                      />
-
-                      {anexoObs ? (
-                        <p className={`mt-2 break-all text-xs leading-5 ${MUTED_TEXT}`}>
-                          Arquivo: <b className="text-white">{anexoObs.name}</b>
-                        </p>
+                      {mostrarCampoBebida ? (
+                        <div>
+                          <label className={LABEL_CLASS}>Bebida</label>
+                          <select
+                            value={bebidaCortesia}
+                            onChange={(e) => setBebidaCortesia(e.target.value)}
+                            className={INPUT_CLASS}
+                          >
+                            {opcoesBebida.map((opcao) => (
+                              <option key={opcao} value={opcao}>
+                                {opcao}
+                              </option>
+                            ))}
+                          </select>
+                          <p className={`mt-1 text-xs leading-5 ${MUTED_TEXT}`}>
+                            Selecione a bebida vinculada à cortesia/aniversário.
+                          </p>
+                        </div>
                       ) : null}
-                    </div>
 
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      className={`inline-flex min-h-[48px] w-full items-center justify-center rounded-xl px-4 py-3 text-base font-semibold transition ${
-                        saving ? 'bg-white/20 text-red-50/50' : 'bg-white text-[#5b1019] hover:bg-red-50'
-                      }`}
-                    >
-                      {saving ? 'Salvando...' : 'Enviar solicitação (aguardando confirmação)'}
-                    </button>
-                  </form>
+                      {modeloPrecoObrigatorio ? (
+                        <div>
+                          <label className={LABEL_CLASS}>Modelo de preço</label>
+                          <select
+                            value={modeloPreco}
+                            onChange={(e) => setModeloPreco(e.target.value)}
+                            className={INPUT_CLASS}
+                          >
+                            <option value="">Selecione</option>
+
+                            {(isCamarote ? precosCamarote : precosMesa).map((p) => (
+                              <option key={p.id} value={p.nome_modelo}>
+                                {p.nome_modelo}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : null}
+
+                      {valorSinalObrigatorio ? (
+                        <div>
+                          <label className={LABEL_CLASS}>Valor do sinal adiantado</label>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            min="0"
+                            step="0.01"
+                            value={valorSinal}
+                            onChange={(e) => setValorSinal(e.target.value)}
+                            className={INPUT_CLASS}
+                            placeholder="Ex: 300.00"
+                          />
+                          <p className={`mt-1 text-xs leading-5 ${MUTED_TEXT}`}>
+                            Informe apenas o valor já pago antecipadamente.
+                          </p>
+                        </div>
+                      ) : null}
+
+                      <div>
+                        <label className={LABEL_CLASS}>Observação (obrigatório)</label>
+                        <textarea
+                          value={observacao}
+                          onChange={(e) => setObservacao(e.target.value.slice(0, 200))}
+                          maxLength={200}
+                          className="mt-1 min-h-[110px] w-full rounded-xl border border-red-950/40 bg-white/95 px-3 py-3 text-[16px] text-neutral-900 outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-700/20"
+                          placeholder="Até 200 caracteres (ou anexe um arquivo)."
+                        />
+                        <p className={`mt-1 text-xs ${MUTED_TEXT}`}>{observacao.length}/200</p>
+                      </div>
+
+                      <div>
+                        <label className={LABEL_CLASS}>Anexo da observação (opcional)</label>
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          onChange={(e) => setAnexoObs(e.target.files?.[0] ?? null)}
+                          className="mt-2 block w-full text-sm text-red-50/80 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-3 file:font-semibold file:text-[#5b1019] hover:file:bg-red-50"
+                        />
+
+                        {anexoObs ? (
+                          <p className={`mt-2 break-all text-xs leading-5 ${MUTED_TEXT}`}>
+                            Arquivo: <b className="text-white">{anexoObs.name}</b>
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className={`inline-flex min-h-[48px] w-full items-center justify-center rounded-xl px-4 py-3 text-base font-semibold transition ${
+                          saving ? 'bg-white/20 text-red-50/50' : 'bg-white text-[#5b1019] hover:bg-red-50'
+                        }`}
+                      >
+                        {saving ? 'Salvando...' : 'Enviar solicitação (aguardando confirmação)'}
+                      </button>
+                    </form>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
         ) : null}
       </div>
     </div>

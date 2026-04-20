@@ -6,6 +6,8 @@ import React, { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { VALID_IDS } from '@/app/utils/constants'
+import { gerarMensagemReserva, compartilharReservaWhatsApp } from '@/app/utils/helpers'
+
 
 type Status =
   | 'pendente'
@@ -682,8 +684,19 @@ function ReservationCard({
             }}
             className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
           >
-            WhatsApp
+            WhatsApp (Cliente)
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              compartilharReservaWhatsApp(r)
+            }}
+            className="rounded-xl border border-neutral-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
+          >
+            Compartilhar no WhatsApp
+          </button>
+
 
           {hasAnyFile ? (
             <button
