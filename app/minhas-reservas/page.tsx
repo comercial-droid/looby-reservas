@@ -29,21 +29,19 @@ function onlyDigits(s: any) {
   return String(s ?? '').replace(/\D/g, '')
 }
 
-function monthNowYYYYMM() {
+function firstDayOfMonthISO() {
   const d = new Date()
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
-  return `${y}-${m}`
+  return `${y}-${m}-01`
 }
 
-function monthRangeFromYYYYMM(ym: string) {
-  const [yStr, mStr] = ym.split('-')
-  const y = Number(yStr)
-  const m = Number(mStr)
-  const end = new Date(y, m, 0)
-  const startISO = `${yStr}-${mStr}-01`
-  const endISO = `${yStr}-${mStr}-${String(end.getDate()).padStart(2, '0')}`
-  return { startISO, endISO }
+function lastDayOfMonthISO() {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = d.getMonth() + 1
+  const lastDay = new Date(y, m, 0).getDate()
+  return `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 }
 
 function labelTipo(tipo: string) {
@@ -115,7 +113,8 @@ export default function MinhasReservasPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [userName, setUserName] = useState<string>('')
 
-  const [mes, setMes] = useState<string>(monthNowYYYYMM())
+  const [dataInicial, setDataInicial] = useState<string>(firstDayOfMonthISO())
+  const [dataFinal, setDataFinal] = useState<string>(lastDayOfMonthISO())
   const [tipoFiltro, setTipoFiltro] = useState<'todas' | 'venda' | 'cortesia' | 'aniversario'>('todas')
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendente' | 'aprovado' | 'cancelado'>('todos')
   const [busca, setBusca] = useState('')
@@ -155,14 +154,12 @@ export default function MinhasReservasPage() {
     setLoading(true)
 
     try {
-      const { startISO, endISO } = monthRangeFromYYYYMM(mes)
-
       let q = supabase
         .from('reservas')
         .select('*')
         .eq('user_id', userId)
-        .gte('data_evento', startISO)
-        .lte('data_evento', endISO)
+        .gte('data_evento', dataInicial)
+        .lte('data_evento', dataFinal)
         .order('created_at', { ascending: false })
 
       if (tipoFiltro !== 'todas') q = q.eq('tipo', tipoFiltro)
@@ -200,7 +197,7 @@ export default function MinhasReservasPage() {
     if (authChecking) return
     fetchRows()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authChecking, userId, mes, tipoFiltro, statusFiltro, busca])
+  }, [authChecking, userId, dataInicial, dataFinal, tipoFiltro, statusFiltro, busca])
 
   const computed = useMemo(() => {
     const total = rows.length
@@ -274,7 +271,7 @@ export default function MinhasReservasPage() {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <h1 className="text-lg font-semibold tracking-tight sm:text-2xl">
-                Meu relatório (mês)
+                Meu relatório
               </h1>
               <p className="mt-1 break-words text-xs text-white/60 sm:text-sm">
                 Usuário: <span className="font-semibold text-white">{userName}</span>
@@ -308,11 +305,21 @@ export default function MinhasReservasPage() {
 
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-12 md:gap-3">
             <div className="sm:col-span-1 md:col-span-3">
-              <label className="text-[11px] text-white/55 sm:text-xs">Mês</label>
+              <label className="text-[11px] text-white/55 sm:text-xs">De</label>
               <input
-                type="month"
-                value={mes}
-                onChange={(e) => setMes(e.target.value)}
+                type="date"
+                value={dataInicial}
+                onChange={(e) => setDataInicial(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-[16px] outline-none focus:border-white/25 sm:py-3"
+              />
+            </div>
+
+            <div className="sm:col-span-1 md:col-span-3">
+              <label className="text-[11px] text-white/55 sm:text-xs">Até</label>
+              <input
+                type="date"
+                value={dataFinal}
+                onChange={(e) => setDataFinal(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-[16px] outline-none focus:border-white/25 sm:py-3"
               />
             </div>
@@ -360,7 +367,7 @@ export default function MinhasReservasPage() {
 
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-          <StatCard title="TOTAL DO MÊS" value={computed.total} hint="Todas as reservas no mês (por data_evento)" />
+          <StatCard title="TOTAL DO PERÍODO" value={computed.total} hint="Todas as reservas no período (por data_evento)" />
           <StatCard title="Pendentes" value={computed.pendentes} />
           <StatCard title="Aprovadas" value={computed.aprovadas} />
           <StatCard title="Canceladas" value={computed.canceladas} />
@@ -371,7 +378,7 @@ export default function MinhasReservasPage() {
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.25)] sm:p-5">
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div>
-              <h2 className="text-lg font-semibold tracking-tight">Reservas do mês</h2>
+              <h2 className="text-lg font-semibold tracking-tight">Reservas do período</h2>
               <p className="mt-1 text-sm text-white/55">Lista filtrada (por você).</p>
             </div>
           </div>
