@@ -3,6 +3,7 @@
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useMemo, useState } from 'react'
+import { contatarClienteWhatsApp } from '@/app/utils/helpers'
 
 type Status = 'pendente' | 'aprovado_cortesia' | 'aprovado_venda' | 'cancelado' | string
 type Tipo = 'aniversario' | 'cortesia' | 'venda' | string
@@ -453,21 +454,38 @@ export default function MinhasReservasPage() {
                           ) : null}
                         </div>
 
-                        <div className="flex shrink-0 flex-col gap-2 sm:w-[170px]">
-                          {podeCancelar ? (
-                            <button
-                              onClick={() => cancelarReserva(r)}
-                              disabled={cancelando}
-                              className="inline-flex min-h-[42px] items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {cancelando ? 'Cancelando...' : 'Cancelar reserva'}
-                            </button>
-                          ) : (
-                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-center text-xs text-white/45">
-                              Sem ações disponíveis
+                            <div className="flex flex-col gap-2 sm:w-[170px]">
+                              {podeCancelar ? (
+                                <>
+                                  <button
+                                    onClick={() => contatarClienteWhatsApp(r)}
+                                    className="inline-flex min-h-[42px] items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+                                  >
+                                    WhatsApp (Cliente)
+                                  </button>
+                                  
+                                  <button
+                                    onClick={() => cancelarReserva(r)}
+                                    disabled={cancelando}
+                                    className="inline-flex min-h-[42px] items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    {cancelando ? 'Cancelando...' : 'Cancelar reserva'}
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => contatarClienteWhatsApp(r)}
+                                    className="inline-flex min-h-[42px] items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+                                  >
+                                    WhatsApp (Cliente)
+                                  </button>
+                                  <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-center text-xs text-white/45">
+                                    Sem ações adicionais
+                                  </div>
+                                </>
+                              )}
                             </div>
-                          )}
-                        </div>
                       </div>
                     </div>
                   )

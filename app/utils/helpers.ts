@@ -201,10 +201,7 @@ export function contatarClienteWhatsApp(r: any) {
   const phone = toBRPhoneE164(r.telefone)
   if (!phone) return alert('Telefone inválido ou ausente.')
   
-  const data = formatBRDate(r.data_evento)
-  const espacoLabel = displayEspacoCompleto(r.espaco_id)
-  
-  const msg = `Olá, ${r.nome}! Recebemos sua solicitação de reserva (${espacoLabel}) para o dia ${data} no Looby.\n\nAssim que aprovarmos, te avisamos por aqui.`
+  const msg = `Olá, ${r.nome}!`
   const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
   window.open(url, '_blank')
 }
