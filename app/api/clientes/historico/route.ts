@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
+import { createClient } from '@/app/utils/supabase/server'
 
 export async function GET(req: NextRequest) {
   try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(req.url)
     const telefoneRaw = searchParams.get('telefone') || ''
     const nomeRaw = searchParams.get('nome') || ''

@@ -86,6 +86,7 @@ function LoginContent() {
         await garantirProfile(userData.user)
       }
 
+      router.refresh()
       router.push(next)
     } finally {
       setLoading(false)
@@ -146,13 +147,6 @@ function LoginContent() {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
 
-          <button
-            type="button"
-            onClick={() => router.push(`/signup?next=${encodeURIComponent(next)}`)}
-            className="w-full rounded-xl py-2 text-sm font-semibold bg-white/10 hover:bg-white/15"
-          >
-            Criar conta
-          </button>
         </form>
       </div>
     </div>
