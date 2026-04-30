@@ -695,7 +695,7 @@ function ReservationCard({
           ) : null}
         </div>
 
-        <div className="flex shrink-0 flex-row gap-2 md:flex-col md:items-stretch">
+        <div className="flex shrink-0 flex-col gap-2 w-full md:w-56 md:items-stretch">
           {onVerDetalhes ? (
             <button
               type="button"
