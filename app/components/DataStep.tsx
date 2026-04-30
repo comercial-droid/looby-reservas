@@ -27,10 +27,10 @@ export function DataStep({
 
   return (
     <div className="flex min-h-svh items-center justify-center bg-[radial-gradient(circle_at_top,#4f111a_0%,#18090c_55%,#090406_100%)] px-4 py-6 text-red-50 sm:p-6">
-      <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-black/80 p-8 shadow-[0_30px_100px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:p-10">
+      <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-black/80 p-5 shadow-[0_30px_100px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:p-10">
         <div className="mb-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex justify-center sm:justify-start">
-            <img src="/looby-infinity.svg" alt="Looby" className="h-[100px] w-auto drop-shadow-[0_0_20px_rgba(255,255,255,0.1)] sm:h-[120px]" />
+            <img src="/looby-infinity.svg" alt="Looby" className="h-20 w-auto drop-shadow-[0_0_20px_rgba(255,255,255,0.1)] sm:h-[120px]" />
           </div>
         </div>
 
@@ -89,7 +89,7 @@ export function DataStep({
           Avançar para o mapa
         </button>
 
-        <div className="mt-8 flex items-center justify-center gap-6">
+        <div className="mt-8 flex items-center justify-center gap-4 sm:gap-6">
           <button
             onClick={() => router.push('/minhas-reservas')}
             className="text-[10px] font-bold uppercase tracking-widest text-red-50/70 underline underline-offset-4 transition-colors hover:text-white"
