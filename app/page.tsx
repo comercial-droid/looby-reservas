@@ -1611,16 +1611,14 @@ const dataEventoFinal = dataEvento
             <button className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={closeDetailsModal} aria-label="Fechar" />
 
             <div className="fixed inset-0 flex items-end justify-center p-0 sm:items-center sm:p-4">
-              <div className="relative w-full max-w-md overflow-hidden rounded-t-3xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] text-red-50 shadow-2xl sm:rounded-2xl">
+              <div className="relative w-full max-w-md overflow-hidden rounded-t-xl border border-red-950/10 bg-white/95 backdrop-blur-2xl text-neutral-900 shadow-[0_40px_100px_rgba(0,0,0,0.25)] sm:rounded-2xl">
                 <div className="max-h-[90svh] overflow-y-auto overscroll-contain p-4 sm:max-h-[85vh] sm:p-6">
                   <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <h2 className="text-xl font-semibold text-white">Detalhes da reserva</h2>
-                      <p className="mt-1 text-sm leading-6 text-red-50/75">
-                        Data: <b className="text-white">{dataEvento}</b> • Espaço:{' '}
-                        <b className="text-white">{displayEspacoCompleto(detailsReserva.espaco_id)}</b>
+                      <h2 className="text-2xl font-black uppercase tracking-tighter text-red-950">Detalhes</h2>
+                      <p className="mt-1 text-sm font-medium uppercase tracking-widest text-neutral-500">
+                        {dataEvento} • {displayEspacoCompleto(detailsReserva.espaco_id)}
                       </p>
-
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -1635,7 +1633,7 @@ const dataEventoFinal = dataEvento
                           Editar
                         </button>
                       )}
-                      <button onClick={closeDetailsModal} className={`${PRIMARY_BTN} w-full sm:w-auto`}>
+                      <button onClick={closeDetailsModal} className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-black/10 bg-black/5 px-6 py-2 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-black/10 active:scale-[0.99]">
                         Fechar
                       </button>
                     </div>
@@ -1649,23 +1647,23 @@ const dataEventoFinal = dataEvento
                           <span className={`rounded-full border px-2 py-1 text-[12px] ${chip.cls}`}>
                             {chip.label}
                           </span>
-                          <span className="text-red-50/35">•</span>
-                          <span className="text-red-50/85">
-                            Tipo: <b className="text-white">{tipoLabel(detailsReserva)}</b>
+                          <span className="text-neutral-300">•</span>
+                          <span className="text-neutral-600">
+                            Tipo: <b className="text-red-950">{tipoLabel(detailsReserva)}</b>
                           </span>
                         </div>
                       )
                     })()}
 
-                    <div className="space-y-2 rounded-xl border border-white/10 bg-white/8 p-3">
+                    <div className="space-y-3 rounded-2xl border border-red-950/5 bg-red-950/5 p-5">
                       <div className="flex justify-between gap-3">
-                        <span className="text-red-50/60">Reservado por</span>
-                        <span className="text-right font-semibold text-white">{detailsReserva.nome}</span>
+                        <span className="text-neutral-500">Reservado por</span>
+                        <span className="text-right font-semibold text-red-950">{detailsReserva.nome}</span>
                       </div>
 
                       <div className="flex justify-between gap-3">
-                        <span className="text-red-50/60">Telefone</span>
-                        <span className="text-right text-white">
+                        <span className="text-neutral-500">Telefone</span>
+                        <span className="text-right text-red-950">
                           {isAdmin ? detailsReserva.telefone : mascararTelefone(detailsReserva.telefone)}
                         </span>
                       </div>
@@ -1674,31 +1672,31 @@ const dataEventoFinal = dataEvento
                       {(detailsReserva.tipo?.toLowerCase() === 'venda' || detailsReserva.tipo?.toLowerCase() === 'na_hora') ? (
                         <>
                           <div className="flex justify-between gap-3">
-                            <span className="text-red-50/60">Valor da mesa/camarote</span>
-                            <span className="text-right text-white">
+                            <span className="text-neutral-500">Valor da mesa/camarote</span>
+                            <span className="text-right text-red-950">
                               {formatCurrencyBR(detailsReserva.valor_espaco)}
                             </span>
                           </div>
 
                           <div className="flex justify-between gap-3">
-                            <span className="text-red-50/60">Sinal adiantado</span>
-                            <span className="text-right text-white">
+                            <span className="text-neutral-500">Sinal adiantado</span>
+                            <span className="text-right text-red-950">
                               {formatCurrencyBR(detailsReserva.valor_sinal)}
                             </span>
                           </div>
                         </>
                       ) : (
                         <div className="flex justify-between gap-3">
-                          <span className="text-red-50/60">Bebida</span>
-                          <span className="text-right text-white">
+                          <span className="text-neutral-500">Bebida</span>
+                          <span className="text-right text-red-950">
                             {detailsReserva.bebida_cortesia || '—'}
                           </span>
                         </div>
                       )}
 
                       <div className="pt-2">
-                        <div className="mb-1 text-red-50/60">Observação</div>
-                        <div className="whitespace-pre-wrap break-words text-white">
+                        <div className="mb-1 text-neutral-500">Observação</div>
+                        <div className="whitespace-pre-wrap break-words text-red-950">
                           {isAdmin
                             ? detailsReserva.observacao || '-'
                             : detailsReserva.observacao
@@ -1744,24 +1742,17 @@ const dataEventoFinal = dataEvento
             <button className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={closeReservaModal} aria-label="Fechar" />
 
             <div className="fixed inset-0 flex items-end justify-center p-0 sm:items-center sm:p-4">
-              <div className="relative w-full max-w-md overflow-hidden rounded-t-3xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] text-red-50 shadow-2xl sm:rounded-2xl">
+              <div className="relative w-full max-w-md overflow-hidden rounded-t-xl border border-red-950/10 bg-white/95 backdrop-blur-2xl text-neutral-900 shadow-[0_40px_100px_rgba(0,0,0,0.25)] sm:rounded-2xl">
                 <div className="max-h-[90svh] overflow-y-auto overscroll-contain p-4 sm:max-h-[85vh] sm:p-6">
                   <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <h2 className="text-xl font-semibold text-white">Solicitar reserva</h2>
-                      <p className="mt-1 text-sm leading-6 text-red-50/75">
-                        Data:{' '}
-                        <b className="text-white">
-                          {dataEvento}
-                        </b>{' '}
-                        • Espaço:{' '}
-                        <b className="text-white">
-                          {selecionado.nome} ({selecionado.tipo})
-                        </b>
+                      <h2 className="text-2xl font-black uppercase tracking-tighter text-red-950">Solicitar Reserva</h2>
+                      <p className="mt-1 text-sm font-medium uppercase tracking-widest text-neutral-500">
+                        {dataEvento} • {selecionado.nome}
                       </p>
                     </div>
 
-                    <button onClick={closeReservaModal} className={`${PRIMARY_BTN} w-full sm:w-auto`}>
+                    <button onClick={closeReservaModal} className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-black/10 bg-black/5 px-6 py-2 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-black/10 active:scale-[0.99]">
                       Fechar
                     </button>
                   </div>
@@ -1775,7 +1766,7 @@ const dataEventoFinal = dataEvento
                   <form className="space-y-4" onSubmit={submitReserva}>
                       {/* ... existing form ... */}
                       <div>
-                        <label className={LABEL_CLASS}>Nome completo</label>
+                        <label className="text-sm font-bold uppercase tracking-widest text-red-950/70">Nome completo</label>
                         <input
                           value={nomeCompleto}
                           onChange={(e) => setNomeCompleto(e.target.value)}
@@ -1784,7 +1775,7 @@ const dataEventoFinal = dataEvento
                       </div>
 
                       <div>
-                        <label className={LABEL_CLASS}>Telefone (WhatsApp)</label>
+                        <label className="text-sm font-bold uppercase tracking-widest text-red-950/70">Telefone (WhatsApp)</label>
                         <input
                           value={telefone}
                           onChange={(e) => setTelefone(e.target.value)}
@@ -1792,27 +1783,27 @@ const dataEventoFinal = dataEvento
                           placeholder="(00) 00000-0000"
                         />
                         {loadingHistorico && (
-                          <p className="mt-1 text-xs text-red-50/50">Consultando histórico...</p>
+                          <p className="mt-1 text-xs text-neutral-400">Consultando histórico...</p>
                         )}
                         {historicoCliente && (
-                          <div className="mt-3 space-y-2">
-                            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                              <div className="flex items-center gap-2 text-xs font-semibold text-white">
-                                <span className="h-2 w-2 rounded-full bg-blue-400"></span>
+                          <div className="mt-4 space-y-3">
+                            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-600">
+                                <span className="h-2 w-2 rounded-full bg-blue-500"></span>
                                 Histórico do cliente
                               </div>
-                              <p className="mt-1 text-xs leading-relaxed text-red-50/80">
+                              <p className="mt-2 text-xs leading-relaxed text-blue-900/80">
                                 {historicoCliente.mensagemHistorico}
                               </p>
                             </div>
 
                             {historicoCliente.jaUsouBeneficioAniversario && (
-                              <div className="rounded-xl border border-orange-400/30 bg-orange-400/10 p-3">
-                                <div className="flex items-center gap-2 text-xs font-bold text-orange-300">
-                                  <span className="h-2 w-2 rounded-full bg-orange-400"></span>
+                              <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-orange-600">
+                                  <span className="h-2 w-2 rounded-full bg-orange-500"></span>
                                   Atenção
                                 </div>
-                                <p className="mt-1 text-xs leading-relaxed text-orange-100">
+                                <p className="mt-2 text-xs leading-relaxed text-orange-900/90">
                                   {historicoCliente.mensagemBeneficio}
                                 </p>
                               </div>
@@ -1822,7 +1813,7 @@ const dataEventoFinal = dataEvento
                       </div>
 
                       <div>
-                        <label className={LABEL_CLASS}>Tipo</label>
+                        <label className="text-sm font-bold uppercase tracking-widest text-red-950/70">Tipo</label>
                         <select
                           value={tipoReserva}
                           onChange={(e) => setTipoReserva(e.target.value as ReservaTipo)}
@@ -1841,7 +1832,7 @@ const dataEventoFinal = dataEvento
 
                       {mostrarCampoBebida ? (
                         <div>
-                          <label className={LABEL_CLASS}>Bebida</label>
+                          <label className="text-sm font-bold uppercase tracking-widest text-red-950/70">Bebida</label>
                           <select
                             value={bebidaCortesia}
                             onChange={(e) => setBebidaCortesia(e.target.value)}
@@ -1853,7 +1844,7 @@ const dataEventoFinal = dataEvento
                               </option>
                             ))}
                           </select>
-                          <p className={`mt-1 text-xs leading-5 ${MUTED_TEXT}`}>
+                          <p className="mt-1 text-xs leading-5 text-neutral-500">
                             Selecione a bebida vinculada à cortesia/aniversário.
                           </p>
                         </div>
@@ -1861,7 +1852,7 @@ const dataEventoFinal = dataEvento
 
                       {modeloPrecoObrigatorio ? (
                         <div>
-                          <label className={LABEL_CLASS}>Modelo de preço</label>
+                          <label className="text-sm font-bold uppercase tracking-widest text-red-950/70">Modelo de preço</label>
                           <select
                             value={modeloPreco}
                             onChange={(e) => setModeloPreco(e.target.value)}
@@ -1880,7 +1871,7 @@ const dataEventoFinal = dataEvento
 
                       {valorSinalObrigatorio ? (
                         <div>
-                          <label className={LABEL_CLASS}>Valor do sinal adiantado</label>
+                          <label className="text-sm font-bold uppercase tracking-widest text-red-950/70">Valor do sinal adiantado</label>
                           <input
                             type="number"
                             inputMode="decimal"
@@ -1891,36 +1882,36 @@ const dataEventoFinal = dataEvento
                             className={INPUT_CLASS}
                             placeholder="Ex: 300.00"
                           />
-                          <p className={`mt-1 text-xs leading-5 ${MUTED_TEXT}`}>
+                          <p className="mt-1 text-xs leading-5 text-neutral-500">
                             Informe apenas o valor já pago antecipadamente.
                           </p>
                         </div>
                       ) : null}
 
                       <div>
-                        <label className={LABEL_CLASS}>Observação (obrigatório)</label>
+                        <label className="text-sm font-bold uppercase tracking-widest text-red-950/70">Observação (obrigatório)</label>
                         <textarea
                           value={observacao}
                           onChange={(e) => setObservacao(e.target.value.slice(0, 200))}
                           maxLength={200}
-                          className="mt-1 min-h-[110px] w-full rounded-xl border border-red-950/40 bg-white/95 px-3 py-3 text-[16px] text-neutral-900 outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-700/20"
+                          className={`${INPUT_CLASS} min-h-[110px] resize-none`}
                           placeholder="Até 200 caracteres (ou anexe um arquivo)."
                         />
-                        <p className={`mt-1 text-xs ${MUTED_TEXT}`}>{observacao.length}/200</p>
+                        <p className="mt-1 text-xs text-neutral-400">{observacao.length}/200</p>
                       </div>
 
                       <div>
-                        <label className={LABEL_CLASS}>Anexo da observação (opcional)</label>
+                        <label className="text-sm font-bold uppercase tracking-widest text-red-950/70">Anexo da observação (opcional)</label>
                         <input
                           type="file"
                           accept="image/*,application/pdf"
                           onChange={(e) => setAnexoObs(e.target.files?.[0] ?? null)}
-                          className="mt-2 block w-full text-sm text-red-50/80 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-3 file:font-semibold file:text-[#5b1019] hover:file:bg-red-50"
+                          className="mt-2 block w-full text-sm text-neutral-500 file:mr-4 file:rounded-lg file:border-0 file:bg-red-950 file:px-4 file:py-3 file:font-semibold file:text-white hover:file:bg-red-900"
                         />
 
                         {anexoObs ? (
                           <p className={`mt-2 break-all text-xs leading-5 ${MUTED_TEXT}`}>
-                            Arquivo: <b className="text-white">{anexoObs.name}</b>
+                            Arquivo: <b className="text-red-950">{anexoObs.name}</b>
                           </p>
                         ) : null}
                       </div>
@@ -1928,11 +1919,23 @@ const dataEventoFinal = dataEvento
                       <button
                         type="submit"
                         disabled={saving}
-                        className={`inline-flex min-h-[48px] w-full items-center justify-center rounded-xl px-4 py-3 text-base font-semibold transition ${
-                          saving ? 'bg-white/20 text-red-50/50' : 'bg-white text-[#5b1019] hover:bg-red-50'
+                        className={`group relative flex min-h-[56px] w-full items-center justify-center overflow-hidden rounded-xl px-4 py-3 text-base font-black uppercase tracking-widest transition-all active:scale-95 ${
+                          saving 
+                            ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' 
+                            : 'bg-red-950 text-white hover:bg-red-900 hover:shadow-[0_10px_30px_rgba(63,11,18,0.3)]'
                         }`}
                       >
-                        {saving ? 'Salvando...' : 'Enviar solicitação (aguardando confirmação)'}
+                        {saving ? (
+                          <span className="flex items-center gap-2">
+                            <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Salvando...
+                          </span>
+                        ) : (
+                          'Solicitar Reserva'
+                        )}
                       </button>
                     </form>
                   </div>
