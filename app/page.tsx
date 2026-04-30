@@ -1316,7 +1316,7 @@ const dataEventoFinal = dataEvento
       )}
 
       {/* HEADER GLOBAL */}
-      <header className="mb-6 border-b border-black/5 bg-white py-5 shadow-sm sm:py-4">
+      <header className="mb-6 border-b border-white/10 bg-white/8 py-5 shadow-sm backdrop-blur-md sm:py-4">
         <div className="mx-auto flex max-w-[1400px] flex-col items-center gap-6 px-4 lg:flex-row lg:justify-between">
           <div className="flex justify-center lg:justify-start">
             <img 
@@ -1326,21 +1326,20 @@ const dataEventoFinal = dataEvento
             />
           </div>
 
-          <div className="flex flex-row flex-wrap items-center justify-center gap-4 lg:justify-end">
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Evento:</span>
+          <div className="grid w-full grid-cols-2 gap-2 sm:gap-3 lg:flex lg:w-auto lg:flex-row lg:items-center lg:justify-end lg:gap-4">
+            <div className="col-span-2 flex items-center justify-center gap-2 lg:col-span-1 lg:justify-start">
+              <span className="text-[10px] font-black uppercase tracking-widest text-white">Evento:</span>
               <input 
                 type="date" 
                 value={dataEvento} 
                 onChange={(e) => setDataEvento(e.target.value)}
-                className="rounded-full border border-[#5b1019]/10 bg-[#5b1019]/5 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#5b1019] outline-none transition-all hover:border-[#5b1019]/30 hover:bg-white focus:border-[#5b1019] focus:ring-2 focus:ring-[#5b1019]/10"
+                className="w-full rounded-none border border-black/20 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-black outline-none shadow-sm transition-all hover:border-black/40 focus:border-black focus:ring-2 focus:ring-black/5 lg:w-auto"
               />
             </div>
 
-            <nav className="flex flex-row flex-wrap items-center justify-center gap-3">
             <button 
               onClick={() => router.push('/minhas-reservas')} 
-              className="px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-[#5b1019] border border-[#5b1019]/20 bg-[#5b1019]/5 transition-all hover:bg-[#5b1019] hover:text-white"
+              className="col-span-1 px-4 py-2.5 rounded-none text-[10px] font-black uppercase tracking-[0.15em] text-black border border-black/20 bg-white shadow-sm transition-all hover:bg-black hover:text-white lg:px-6"
             >
               Relatório
             </button>
@@ -1348,7 +1347,7 @@ const dataEventoFinal = dataEvento
             {isAdmin && (
               <button 
                 onClick={() => router.push('/admin')} 
-                className="px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-[#5b1019] border border-[#5b1019]/20 bg-[#5b1019]/5 transition-all hover:bg-[#5b1019] hover:text-white"
+                className="col-span-1 px-4 py-2.5 rounded-none text-[10px] font-black uppercase tracking-[0.15em] text-black border border-black/20 bg-white shadow-sm transition-all hover:bg-black hover:text-white lg:px-6"
               >
                 Painel Admin
               </button>
@@ -1356,12 +1355,11 @@ const dataEventoFinal = dataEvento
 
             <button 
               onClick={sair} 
-              className="px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-red-600 border border-red-200 bg-red-50 transition-all hover:bg-red-600 hover:text-white"
+              className={`${isAdmin ? 'col-span-2' : 'col-span-1'} px-4 py-2.5 rounded-none text-[10px] font-black uppercase tracking-[0.15em] text-black border border-black/20 bg-white shadow-sm transition-all hover:bg-black hover:text-white lg:col-span-1 lg:px-6`}
             >
               Sair
             </button>
-          </nav>
-        </div>
+          </div>
       </div>
     </header>
 

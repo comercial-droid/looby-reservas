@@ -26,7 +26,12 @@ export function DataStep({
   const router = useRouter()
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-[radial-gradient(circle_at_top,#4f111a_0%,#18090c_55%,#090406_100%)] px-4 py-6 text-red-50 sm:p-6">
+    <div className="relative flex min-h-svh items-center justify-center px-4 py-6 text-red-50 sm:p-6">
+      {/* Background Image with Overlay */}
+      <div 
+        className="fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.9)), url('/background.png')" }}
+      />
       <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-black/80 p-5 shadow-[0_30px_100px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:p-10">
         <div className="mb-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex justify-center sm:justify-start">
