@@ -32,7 +32,7 @@ export function DataStep({
         className="fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.9)), url('/background.png')" }}
       />
-      <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-black/80 p-5 shadow-[0_30px_100px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:p-10">
+      <div className="w-full max-w-xl overflow-hidden rounded-3xl border border-white/10 bg-black/80 p-5 shadow-[0_30px_100px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:p-10">
         <div className="mb-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex justify-center sm:justify-start">
             <img src="/looby-infinity.svg" alt="Looby" className="h-20 w-auto drop-shadow-[0_0_20px_rgba(255,255,255,0.1)] sm:h-[120px]" />
@@ -59,20 +59,16 @@ export function DataStep({
 
 
 
-        <div className="mt-6 space-y-2">
+        <div className="mt-6 space-y-2 w-full max-w-full">
           <label className={LABEL_CLASS}>Data do evento</label>
           <input
             type="date"
             value={dataEvento}
             onChange={(e) => setDataEvento(e.target.value)}
-            className={INPUT_CLASS}
+            className={`${INPUT_CLASS} block max-w-full min-w-0`}
           />
 
-          {isAdmin ? (
-            <p className="mt-2 text-xs leading-5 text-emerald-300">
-              🛡️ Modo Administrador: você pode solicitar e alterar qualquer reserva, inclusive em datas passadas.
-            </p>
-          ) : modoSomenteNaHora ? (
+          {modoSomenteNaHora ? (
             <p className="mt-2 text-xs leading-5 text-sky-200">
               ℹ️ Para a data operacional atual, o sistema permite somente venda na hora.
             </p>
