@@ -455,12 +455,12 @@ function Pill({
               ? 'bg-blue-50 text-blue-700 border-blue-200'
               : 'bg-neutral-100 text-neutral-700 border-neutral-200'
 
-  return <span className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs ${cls}`}>{children}</span>
+  return <span className={`inline-flex items-center gap-2 rounded-sm border px-2.5 py-1 text-xs ${cls}`}>{children}</span>
 }
 
 function StatCard({ title, value, hint }: { title: string; value: React.ReactNode; hint?: string }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+    <div className="rounded-none border border-neutral-200 bg-white p-4 shadow-sm">
       <div className="text-xs text-neutral-500">{title}</div>
       <div className="mt-1 text-3xl font-semibold tracking-tight text-neutral-900">{value}</div>
       {hint ? <div className="mt-1 text-xs text-neutral-400">{hint}</div> : null}
@@ -509,7 +509,7 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm">
+    <section className="rounded-none border border-neutral-200 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
           <h2 className="text-lg font-semibold tracking-tight text-neutral-900">{title}</h2>
@@ -523,7 +523,7 @@ function Section({
 }
 
 function EmptyState({ text }: { text: string }) {
-  return <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-6 text-sm text-neutral-500">{text}</div>
+  return <div className="rounded-none border border-neutral-200 bg-neutral-50 p-6 text-sm text-neutral-500">{text}</div>
 }
 
 function ReservationCard({
@@ -561,7 +561,7 @@ function ReservationCard({
   const bebidaText = String(r.bebida_cortesia ?? '').trim()
 
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+    <div className="rounded-none border border-neutral-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -579,57 +579,57 @@ function ReservationCard({
           <div className="mt-3 flex flex-wrap gap-2">
             <Pill tone="blue">{labelTipo(r.tipo)}</Pill>
             {modeloPrecoText ? <Pill tone="blue">Modelo: {modeloPrecoText}</Pill> : null}
-            {bebidaText ? <Pill tone="orange">Bebida: {bebidaText}</Pill> : null}
-            {temValorEspaco ? <Pill tone="blue">Valor: {formatCurrencyBR(r.valor_espaco)}</Pill> : null}
-            {temValorSinal ? <Pill tone="green">Sinal: {formatCurrencyBR(r.valor_sinal)}</Pill> : null}
-            {mostrarFinanceiro && (isAprovadoVenda(r.status) || isAprovadoNaHora(r.status)) ? (
+            {bebidaText && compact ? <Pill tone="orange">Bebida: {bebidaText}</Pill> : null}
+            {temValorEspaco && compact ? <Pill tone="blue">Valor: {formatCurrencyBR(r.valor_espaco)}</Pill> : null}
+            {temValorSinal && compact ? <Pill tone="green">Sinal: {formatCurrencyBR(r.valor_sinal)}</Pill> : null}
+            {mostrarFinanceiro && compact && (isAprovadoVenda(r.status) || isAprovadoNaHora(r.status)) ? (
               <Pill tone="yellow">Falta: {formatCurrencyBR(faltaReceber)}</Pill>
             ) : null}
             <Pill tone="blue">Resp: {solicitanteNome ?? (r.user_id ? r.user_id.slice(0, 8) : '—')}</Pill>
-            {hasObsText ? <Pill>Observação</Pill> : null}
-            {hasAnyFile ? <Pill>{totalAnexos > 1 ? `Anexos (${totalAnexos})` : 'Anexo'}</Pill> : null}
-            {r.created_at ? <Pill tone="yellow">Pedido: {formatarDataHora(r.created_at)}</Pill> : null}
+            {hasObsText && compact ? <Pill>Observação</Pill> : null}
+            {hasAnyFile && compact ? <Pill>{totalAnexos > 1 ? `Anexos (${totalAnexos})` : 'Anexo'}</Pill> : null}
+            {r.created_at && compact ? <Pill tone="yellow">Pedido: {formatarDataHora(r.created_at)}</Pill> : null}
           </div>
 
           {!compact && (hasObsText || hasFile || temValorSinal || temValorEspaco || bebidaText) ? (
             <div className="mt-3 space-y-2">
               {bebidaText ? (
-                <div className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2">
+                <div className="rounded-none border border-orange-200 bg-orange-50 px-3 py-2">
                   <div className="text-xs text-orange-700">Bebida destinada</div>
                   <div className="mt-1 text-sm font-semibold text-orange-900">{bebidaText}</div>
                 </div>
               ) : null}
 
               {temValorEspaco ? (
-                <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2">
+                <div className="rounded-none border border-blue-200 bg-blue-50 px-3 py-2">
                   <div className="text-xs text-blue-700">Valor da mesa/camarote</div>
                   <div className="mt-1 text-sm font-semibold text-blue-900">{formatCurrencyBR(r.valor_espaco)}</div>
                 </div>
               ) : null}
 
               {temValorSinal ? (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+                <div className="rounded-none border border-emerald-200 bg-emerald-50 px-3 py-2">
                   <div className="text-xs text-emerald-700">Valor de sinal adiantado</div>
                   <div className="mt-1 text-sm font-semibold text-emerald-900">{formatCurrencyBR(r.valor_sinal)}</div>
                 </div>
               ) : null}
 
               {mostrarFinanceiro && (isAprovadoVenda(r.status) || isAprovadoNaHora(r.status)) ? (
-                <div className="rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2">
+                <div className="rounded-none border border-yellow-200 bg-yellow-50 px-3 py-2">
                   <div className="text-xs text-yellow-700">Falta receber na hora</div>
                   <div className="mt-1 text-sm font-semibold text-yellow-900">{formatCurrencyBR(faltaReceber)}</div>
                 </div>
               ) : null}
 
               {hasObsText ? (
-                <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2">
+                <div className="rounded-none border border-neutral-200 bg-neutral-50 px-3 py-2">
                   <div className="text-xs text-neutral-500">Observação</div>
                   <div className="mt-1 whitespace-pre-wrap break-words text-sm text-neutral-800">{r.observacao}</div>
                 </div>
               ) : null}
 
               {hasAnyFile ? (
-                <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2">
+                <div className="rounded-none border border-neutral-200 bg-neutral-50 px-3 py-2">
                   <div className="text-xs text-neutral-500">{totalAnexos > 1 ? 'Anexos' : 'Anexo'}</div>
                   <div className="mt-1 flex flex-col gap-2">
                     {r.comprovante_url && (
@@ -670,7 +670,7 @@ function ReservationCard({
             <button
               type="button"
               onClick={onVerDetalhes}
-              className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+              className="rounded-none border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
             >
               Detalhes
             </button>
@@ -682,7 +682,7 @@ function ReservationCard({
               if (!link) return alert('Telefone inválido/ausente para enviar WhatsApp.')
               window.open(link, '_blank', 'noopener,noreferrer')
             }}
-            className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+            className="rounded-none border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
           >
             WhatsApp (Cliente)
           </button>
@@ -692,7 +692,7 @@ function ReservationCard({
             onClick={() => {
               compartilharReservaWhatsApp(r)
             }}
-            className="rounded-xl border border-neutral-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
+            className="rounded-none border border-neutral-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
           >
             Compartilhar no WhatsApp
           </button>
@@ -703,7 +703,7 @@ function ReservationCard({
               type="button"
               onClick={onVerDetalhes || onVerComprovante}
               disabled={disabled}
-              className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-55"
+              className="rounded-none border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-55"
             >
               {totalAnexos > 1 ? `Anexos (${totalAnexos})` : 'Anexo'}
             </button>
@@ -713,7 +713,7 @@ function ReservationCard({
             <button
               onClick={onCancelar}
               disabled={disabled}
-              className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-55"
+              className="rounded-none bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-55"
             >
               {disabled ? 'Salvando…' : 'Cancelar'}
             </button>
@@ -723,7 +723,7 @@ function ReservationCard({
             <button
               onClick={onAprovar}
               disabled={disabled}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-55 ${
+              className={`rounded-none px-4 py-2 text-sm font-semibold text-white disabled:opacity-55 ${
                 normLower(r.tipo) === 'venda'
                   ? 'bg-emerald-600 hover:bg-emerald-500'
                   : normLower(r.tipo) === 'na_hora'
@@ -1977,25 +1977,25 @@ async function exportarRelatorioAnexos() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => router.push('/')}
-                className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                className="rounded-none border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
               >
                 Ver mapa
               </button>
               <button
                 onClick={fetchReservas}
-                className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                className="rounded-none border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
               >
                 Atualizar
               </button>
               <button
   onClick={() => setMainTab('configuracoes')}
-  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+  className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
     mainTab === 'configuracoes' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
   }`}
 >
   Configurações
 </button>
-              <button onClick={handleLogout} className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800">
+              <button onClick={handleLogout} className="rounded-none bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800">
                 Sair
               </button>
             </div>
@@ -2004,7 +2004,7 @@ async function exportarRelatorioAnexos() {
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button
               onClick={() => setMainTab('pendentes')}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
                 mainTab === 'pendentes' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
               }`}
             >
@@ -2013,7 +2013,7 @@ async function exportarRelatorioAnexos() {
 
             <button
               onClick={() => setMainTab('historico')}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
                 mainTab === 'historico' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
               }`}
             >
@@ -2022,7 +2022,7 @@ async function exportarRelatorioAnexos() {
 
             <button
               onClick={() => setMainTab('financeiro')}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
                 mainTab === 'financeiro' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
               }`}
             >
@@ -2037,7 +2037,7 @@ async function exportarRelatorioAnexos() {
                 type="date"
                 value={dataInicial}
                 onChange={(e) => setDataInicial(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400"
+                className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400"
               />
             </div>
 
@@ -2047,7 +2047,7 @@ async function exportarRelatorioAnexos() {
                 type="date"
                 value={dataFinal}
                 onChange={(e) => setDataFinal(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400"
+                className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400"
               />
             </div>
 
@@ -2056,7 +2056,7 @@ async function exportarRelatorioAnexos() {
               <select
                 value={userFiltro}
                 onChange={(e) => setUserFiltro(e.target.value as any)}
-                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400"
+                className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400"
               >
                 <option value="todos">Todos</option>
                 {profiles.map((p) => (
@@ -2072,7 +2072,7 @@ async function exportarRelatorioAnexos() {
               <select
                 value={tipoFiltro}
                 onChange={(e) => setTipoFiltro(e.target.value as any)}
-                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400"
+                className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400"
               >
                 <option value="todas">Todos</option>
                 <option value="aniversario">Aniversário</option>
@@ -2087,7 +2087,7 @@ async function exportarRelatorioAnexos() {
               <select
                 value={espacoTipoFiltro}
                 onChange={(e) => setEspacoTipoFiltro(e.target.value as any)}
-                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400"
+                className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400"
               >
                 <option value="todos">Mesa + Camarote</option>
                 <option value="mesa">Somente Mesas</option>
@@ -2101,7 +2101,7 @@ async function exportarRelatorioAnexos() {
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Ex: João, 45999…, C4, M13…"
-                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400"
+                className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400"
               />
             </div>
           </div>
@@ -2110,7 +2110,7 @@ async function exportarRelatorioAnexos() {
 
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
         {loading ? (
-          <div className="rounded-3xl border border-neutral-200 bg-white p-10 text-neutral-600 shadow-sm">Carregando…</div>
+          <div className="rounded-none border border-neutral-200 bg-white p-10 text-neutral-600 shadow-sm">Carregando…</div>
         ) : (
           <>
             {mainTab === 'pendentes' ? (
@@ -2130,7 +2130,7 @@ async function exportarRelatorioAnexos() {
                     <EmptyState text="Nenhuma reserva pendente no momento." />
                   ) : (
                     computed.pendentesFila.map((r, index) => (
-                      <div key={String(r.id)} className="rounded-3xl border border-yellow-200 bg-yellow-50/60 p-3">
+                      <div key={String(r.id)} className="rounded-none border border-yellow-200 bg-yellow-50/60 p-3">
                         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex items-center gap-2">
                             <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-neutral-900 px-2 text-xs font-bold text-white">
@@ -2163,7 +2163,7 @@ async function exportarRelatorioAnexos() {
   <>
     <Section title="Configuração de bebidas" subtitle="Gerencie as opções de bebida para cortesia e aniversário.">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[380px_minmax(0,1fr)]">
-        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+        <div className="rounded-none border border-neutral-200 bg-neutral-50 p-4">
           <h3 className="font-semibold text-neutral-900">Nova bebida</h3>
 
           <div className="mt-4 space-y-3">
@@ -2172,7 +2172,7 @@ async function exportarRelatorioAnexos() {
               <input
                 value={novaBebidaNome}
                 onChange={(e) => setNovaBebidaNome(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
                 placeholder="Ex: whisky"
               />
             </div>
@@ -2184,14 +2184,14 @@ async function exportarRelatorioAnexos() {
                 min="0"
                 value={novaBebidaOrdem}
                 onChange={(e) => setNovaBebidaOrdem(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
                 placeholder="Ex: 6"
               />
             </div>
 
             <button
               onClick={criarBebida}
-              className="w-full rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+              className="w-full rounded-none bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
             >
               Adicionar bebida
             </button>
@@ -2203,7 +2203,7 @@ async function exportarRelatorioAnexos() {
             <EmptyState text="Nenhuma bebida cadastrada." />
           ) : (
             configBebidas.map((row) => (
-              <div key={row.id} className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+              <div key={row.id} className="rounded-none border border-neutral-200 bg-white p-4 shadow-sm">
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_120px_140px_auto_auto] md:items-end">
                   <div>
                     <label className="text-xs text-neutral-500">Nome</label>
@@ -2214,7 +2214,7 @@ async function exportarRelatorioAnexos() {
                           prev.map((item) => (item.id === row.id ? { ...item, nome: e.target.value } : item))
                         )
                       }
-                      className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                      className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
                     />
                   </div>
 
@@ -2231,7 +2231,7 @@ async function exportarRelatorioAnexos() {
                           )
                         )
                       }
-                      className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                      className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
                     />
                   </div>
 
@@ -2244,14 +2244,14 @@ async function exportarRelatorioAnexos() {
 
                   <button
                     onClick={() => salvarBebida(row)}
-                    className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                    className="rounded-none border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
                   >
                     Salvar
                   </button>
 
                   <button
                     onClick={() => toggleBebidaAtiva(row)}
-                    className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${
+                    className={`rounded-none px-4 py-2 text-sm font-semibold text-white ${
                       row.ativo ? 'bg-red-600 hover:bg-red-500' : 'bg-emerald-600 hover:bg-emerald-500'
                     }`}
                   >
@@ -2267,7 +2267,7 @@ async function exportarRelatorioAnexos() {
 
     <Section title="Configuração de preços e consumação" subtitle="Gerencie modelos de mesa e camarote sem alterar o código.">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[420px_minmax(0,1fr)]">
-        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+        <div className="rounded-none border border-neutral-200 bg-neutral-50 p-4">
           <h3 className="font-semibold text-neutral-900">Novo modelo</h3>
 
           <div className="mt-4 space-y-3">
@@ -2276,7 +2276,7 @@ async function exportarRelatorioAnexos() {
               <select
                 value={novoPrecoTipoEspaco}
                 onChange={(e) => setNovoPrecoTipoEspaco(e.target.value as 'MESA' | 'CAMAROTE')}
-                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
               >
                 <option value="CAMAROTE">CAMAROTE</option>
                 <option value="MESA">MESA</option>
@@ -2288,7 +2288,7 @@ async function exportarRelatorioAnexos() {
               <input
                 value={novoPrecoNomeModelo}
                 onChange={(e) => setNovoPrecoNomeModelo(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
                 placeholder="Ex: Camarote 5000/3000 consumação"
               />
             </div>
@@ -2302,7 +2302,7 @@ async function exportarRelatorioAnexos() {
                   step="0.01"
                   value={novoPrecoValorTotal}
                   onChange={(e) => setNovoPrecoValorTotal(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                  className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
                 />
               </div>
 
@@ -2314,7 +2314,7 @@ async function exportarRelatorioAnexos() {
                   step="0.01"
                   value={novoPrecoValorConsumacao}
                   onChange={(e) => setNovoPrecoValorConsumacao(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                  className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
                 />
               </div>
             </div>
@@ -2326,13 +2326,13 @@ async function exportarRelatorioAnexos() {
                 min="0"
                 value={novoPrecoOrdem}
                 onChange={(e) => setNovoPrecoOrdem(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
               />
             </div>
 
             <button
               onClick={criarPreco}
-              className="w-full rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+              className="w-full rounded-none bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
             >
               Adicionar modelo
             </button>
@@ -2344,7 +2344,7 @@ async function exportarRelatorioAnexos() {
             <EmptyState text="Nenhum modelo de preço cadastrado." />
           ) : (
             configPrecos.map((row) => (
-              <div key={row.id} className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+              <div key={row.id} className="rounded-none border border-neutral-200 bg-white p-4 shadow-sm">
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-6 md:items-end">
                   <div>
                     <label className="text-xs text-neutral-500">Tipo</label>
@@ -2355,7 +2355,7 @@ async function exportarRelatorioAnexos() {
                           prev.map((item) => (item.id === row.id ? { ...item, tipo_espaco: e.target.value } : item))
                         )
                       }
-                      className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                      className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
                     >
                       <option value="CAMAROTE">CAMAROTE</option>
                       <option value="MESA">MESA</option>
@@ -2371,7 +2371,7 @@ async function exportarRelatorioAnexos() {
                           prev.map((item) => (item.id === row.id ? { ...item, nome_modelo: e.target.value } : item))
                         )
                       }
-                      className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                      className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
                     />
                   </div>
 
@@ -2389,7 +2389,7 @@ async function exportarRelatorioAnexos() {
                           )
                         )
                       }
-                      className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                      className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
                     />
                   </div>
 
@@ -2407,7 +2407,7 @@ async function exportarRelatorioAnexos() {
                           )
                         )
                       }
-                      className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                      className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
                     />
                   </div>
 
@@ -2424,7 +2424,7 @@ async function exportarRelatorioAnexos() {
                           )
                         )
                       }
-                      className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                      className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
                     />
                   </div>
                 </div>
@@ -2435,14 +2435,14 @@ async function exportarRelatorioAnexos() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => salvarPreco(row)}
-                      className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                      className="rounded-none border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
                     >
                       Salvar
                     </button>
 
                     <button
                       onClick={() => togglePrecoAtivo(row)}
-                      className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${
+                      className={`rounded-none px-4 py-2 text-sm font-semibold text-white ${
                         row.ativo ? 'bg-red-600 hover:bg-red-500' : 'bg-emerald-600 hover:bg-emerald-500'
                       }`}
                     >
@@ -2472,7 +2472,7 @@ async function exportarRelatorioAnexos() {
                   </div>
 
                   <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                    <div className="rounded-none border border-neutral-200 bg-neutral-50 p-4">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-neutral-900">Ranking total por usuário</h3>
                         <Pill tone="blue">{rankingUsers.length}</Pill>
@@ -2483,7 +2483,7 @@ async function exportarRelatorioAnexos() {
                           <EmptyState text="Sem dados no período atual." />
                         ) : (
                           rankingUsers.map((it, idx) => (
-                            <div key={it.uid} className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-3 py-2">
+                            <div key={it.uid} className="flex items-center justify-between rounded-none border border-neutral-200 bg-white px-3 py-2">
                               <div className="min-w-0">
                                 <div className="truncate text-sm font-semibold text-neutral-900">
                                   {idx + 1}. {it.name}
@@ -2496,7 +2496,7 @@ async function exportarRelatorioAnexos() {
                       </div>
                     </div>
 
-                    <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                    <div className="rounded-none border border-neutral-200 bg-neutral-50 p-4">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-neutral-900">Vendas antecipadas por usuário</h3>
                         <Pill tone="blue">{rankingVendasAntecipadas.length}</Pill>
@@ -2507,7 +2507,7 @@ async function exportarRelatorioAnexos() {
                           <EmptyState text="Sem vendas antecipadas no período atual." />
                         ) : (
                           rankingVendasAntecipadas.map((it, idx) => (
-                            <div key={it.uid} className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-3 py-2">
+                            <div key={it.uid} className="flex items-center justify-between rounded-none border border-neutral-200 bg-white px-3 py-2">
                               <div className="min-w-0">
                                 <div className="truncate text-sm font-semibold text-neutral-900">
                                   {idx + 1}. {it.name}
@@ -2520,13 +2520,13 @@ async function exportarRelatorioAnexos() {
                       </div>
                     </div>
 
-                    <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                    <div className="rounded-none border border-neutral-200 bg-neutral-50 p-4">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-neutral-900">Filtro da lista</h3>
                         <select
                           value={historicoStatus}
                           onChange={(e) => setHistoricoStatus(e.target.value as any)}
-                          className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400"
+                          className="rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400"
                         >
                           <option value="todas">Todas</option>
                           <option value="pendentes">Pendentes</option>
@@ -2572,7 +2572,7 @@ async function exportarRelatorioAnexos() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => setFinanceTab('cobranca')}
-                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
                         financeTab === 'cobranca' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
                       }`}
                     >
@@ -2581,7 +2581,7 @@ async function exportarRelatorioAnexos() {
 
                     <button
                       onClick={() => setFinanceTab('bebidas')}
-                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
                         financeTab === 'bebidas' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
                       }`}
                     >
@@ -2590,7 +2590,7 @@ async function exportarRelatorioAnexos() {
 
                     <button
                       onClick={() => setFinanceTab('anexos')}
-                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
                         financeTab === 'anexos' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
                       }`}
                     >
@@ -2607,7 +2607,7 @@ async function exportarRelatorioAnexos() {
                       right={
                         <button
                           onClick={exportarRelatorioCobranca}
-                          className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+                          className="rounded-none bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
                         >
                           Exportar PDF
                         </button>
@@ -2623,7 +2623,7 @@ async function exportarRelatorioAnexos() {
                     </Section>
 
                     <Section title="Recepção / cobrança" subtitle="Modelo operacional para caixa/recepção.">
-                      <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
+                      <div className="overflow-x-auto rounded-none border border-neutral-200 bg-white">
                         <table className="min-w-full bg-white text-xs sm:text-sm">
                           <thead className="bg-neutral-50">
   <tr className="text-left text-neutral-600">
@@ -2671,7 +2671,7 @@ async function exportarRelatorioAnexos() {
                           <EmptyState text="Nenhum dado financeiro encontrado no período atual." />
                         ) : (
                           computed.financeiroPorEvento.map((item) => (
-                             <div key={item.data_evento} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                             <div key={item.data_evento} className="rounded-none border border-neutral-200 bg-neutral-50 p-4">
                                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                                  <div>
                                    <div className="text-base font-semibold text-neutral-900">{formatBRDate(item.data_evento)}</div>
@@ -2679,12 +2679,12 @@ async function exportarRelatorioAnexos() {
                                  </div>
  
                                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                   <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                                   <div className="rounded-none border border-emerald-200 bg-emerald-50 px-4 py-3">
                                      <div className="text-xs text-emerald-700">Total de sinais do evento</div>
                                      <div className="mt-1 text-lg font-semibold text-emerald-900">{formatCurrencyBR(item.totalSinais)}</div>
                                    </div>
  
-                                   <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+                                   <div className="rounded-none border border-blue-200 bg-blue-50 px-4 py-3">
                                      <div className="text-xs text-blue-700">Falta receber na hora</div>
                                      <div className="mt-1 text-lg font-semibold text-blue-900">{formatCurrencyBR(item.totalFaltaReceber)}</div>
                                    </div>
@@ -2704,7 +2704,7 @@ async function exportarRelatorioAnexos() {
                        right={
                          <button
                            onClick={exportarRelatorioBebidas}
-                           className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+                           className="rounded-none bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
                          >
                            Exportar PDF
                          </button>
@@ -2725,7 +2725,7 @@ async function exportarRelatorioAnexos() {
                      </Section>
  
                      <Section title="Bebidas destinadas" subtitle="Espaço, nome do cliente, tipo e bebida destinada.">
-                       <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
+                       <div className="overflow-x-auto rounded-none border border-neutral-200 bg-white">
                          <table className="min-w-full bg-white text-sm">
                            <thead className="bg-neutral-50">
    <tr className="text-left text-neutral-600">
@@ -2769,13 +2769,13 @@ async function exportarRelatorioAnexos() {
                       right={
                         <button
                           onClick={exportarRelatorioAnexos}
-                          className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+                          className="rounded-none bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
                         >
                           Gerar PDF de Comprovantes
                         </button>
                       }
                     >
-                      <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-6 text-center">
+                      <div className="rounded-none border border-neutral-200 bg-neutral-50 p-6 text-center">
                         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-600">
                           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
@@ -2788,7 +2788,7 @@ async function exportarRelatorioAnexos() {
                         <div className="mt-6 flex justify-center">
                           <button
                             onClick={exportarRelatorioAnexos}
-                            className="rounded-xl border border-neutral-200 bg-white px-6 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50"
+                            className="rounded-none border border-neutral-200 bg-white px-6 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50"
                           >
                             Clique aqui para iniciar a geração do arquivo
                           </button>
@@ -2807,7 +2807,7 @@ async function exportarRelatorioAnexos() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <button className="absolute inset-0 bg-black/40" onClick={fecharDetalhesReserva} aria-label="Fechar" />
 
-          <div className="relative max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-neutral-200 bg-white p-5 shadow-2xl">
+          <div className="relative max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-none border border-neutral-200 bg-white p-5 shadow-2xl">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <h3 className="text-lg font-semibold tracking-tight text-neutral-900">
@@ -2823,7 +2823,7 @@ async function exportarRelatorioAnexos() {
                 {reservaSelecionada.comprovante_url ? (
                   <button
                     onClick={() => abrirComprovante(reservaSelecionada)}
-                    className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                    className="rounded-none border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
                   >
                     Anexo Original
                   </button>
@@ -2833,7 +2833,7 @@ async function exportarRelatorioAnexos() {
                   <button
                     key={idx}
                     onClick={() => abrirComprovante(reservaSelecionada, path)}
-                    className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                    className="rounded-none border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
                   >
                     Anexo Extra {idx + 1}
                   </button>
@@ -2841,7 +2841,7 @@ async function exportarRelatorioAnexos() {
 
                 <button
                   onClick={fecharDetalhesReserva}
-                  className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+                  className="rounded-none bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
                 >
                   Fechar
                 </button>
@@ -2849,14 +2849,14 @@ async function exportarRelatorioAnexos() {
             </div>
 
             {loadingHistorico && (
-              <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-3">
+              <div className="mt-4 rounded-none border border-blue-100 bg-blue-50 p-3">
                 <p className="text-xs font-medium text-blue-700 animate-pulse">Consultando histórico do cliente...</p>
               </div>
             )}
 
             {historicoCliente && (
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+                <div className="rounded-none border border-blue-200 bg-blue-50 p-4 shadow-sm">
                   <div className="flex items-center gap-2 text-sm font-bold text-blue-900">
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] text-white">i</span>
                     Histórico do cliente
@@ -2867,7 +2867,7 @@ async function exportarRelatorioAnexos() {
                 </div>
 
                 {historicoCliente.jaUsouBeneficioAniversario && (
-                  <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4 shadow-sm">
+                  <div className="rounded-none border border-orange-200 bg-orange-50 p-4 shadow-sm">
                     <div className="flex items-center gap-2 text-sm font-bold text-orange-900">
                       <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] text-white">!</span>
                       Atenção Especial
@@ -2881,7 +2881,7 @@ async function exportarRelatorioAnexos() {
             )}
 
             <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-3">
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 xl:col-span-1">
+              <div className="rounded-none border border-neutral-200 bg-neutral-50 p-4 xl:col-span-1">
                 <div className="mb-4 flex items-center justify-between">
                   <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-500">Dados da reserva</h4>
 
@@ -2890,7 +2890,7 @@ async function exportarRelatorioAnexos() {
                       setEditMode((v) => !v)
                       popularFormularioEdicao(reservaSelecionada)
                     }}
-                    className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
+                    className="rounded-none border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
                   >
                     {editMode ? 'Fechar edição' : 'Editar reserva'}
                   </button>
@@ -2913,7 +2913,7 @@ async function exportarRelatorioAnexos() {
                     {isTipoBebida(reservaSelecionada.tipo) ? (
                       <div>
                         <div className="text-neutral-500">Bebida destinada</div>
-                        <div className="mt-1 rounded-xl border border-orange-200 bg-orange-50 p-3 font-semibold text-orange-900">
+                        <div className="mt-1 rounded-none border border-orange-200 bg-orange-50 p-3 font-semibold text-orange-900">
                           {String(reservaSelecionada.bebida_cortesia ?? '').trim() || '—'}
                         </div>
                       </div>
@@ -2933,28 +2933,28 @@ async function exportarRelatorioAnexos() {
 
                     <div>
                       <div className="text-neutral-500">Valor da mesa/camarote</div>
-                      <div className="mt-1 rounded-xl border border-blue-200 bg-blue-50 p-3 font-semibold text-blue-900">
+                      <div className="mt-1 rounded-none border border-blue-200 bg-blue-50 p-3 font-semibold text-blue-900">
                         {Number(reservaSelecionada.valor_espaco ?? 0) > 0 ? formatCurrencyBR(reservaSelecionada.valor_espaco) : '—'}
                       </div>
                     </div>
 
                     <div>
                       <div className="text-neutral-500">Valor do sinal adiantado</div>
-                      <div className="mt-1 rounded-xl border border-emerald-200 bg-emerald-50 p-3 font-semibold text-emerald-900">
+                      <div className="mt-1 rounded-none border border-emerald-200 bg-emerald-50 p-3 font-semibold text-emerald-900">
                         {Number(reservaSelecionada.valor_sinal ?? 0) > 0 ? formatCurrencyBR(reservaSelecionada.valor_sinal) : '—'}
                       </div>
                     </div>
 
                     <div>
                       <div className="text-neutral-500">Falta receber</div>
-                      <div className="mt-1 rounded-xl border border-yellow-200 bg-yellow-50 p-3 font-semibold text-yellow-900">
+                      <div className="mt-1 rounded-none border border-yellow-200 bg-yellow-50 p-3 font-semibold text-yellow-900">
                         {isTipoFinanceiro(reservaSelecionada.tipo) ? formatCurrencyBR(valorFaltaReceber(reservaSelecionada)) : '—'}
                       </div>
                     </div>
 
                     <div>
                       <div className="text-neutral-500">Observação</div>
-                      <div className="mt-1 whitespace-pre-wrap break-words rounded-xl border border-neutral-200 bg-white p-3 text-neutral-800">
+                      <div className="mt-1 whitespace-pre-wrap break-words rounded-none border border-neutral-200 bg-white p-3 text-neutral-800">
                         {String(reservaSelecionada.observacao ?? '').trim() || 'Sem observação'}
                       </div>
                     </div>
@@ -2966,7 +2966,7 @@ async function exportarRelatorioAnexos() {
                       <select
                         value={editEspacoId}
                         onChange={(e) => setEditEspacoId(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 outline-none focus:border-neutral-400"
+                        className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2.5 outline-none focus:border-neutral-400"
                       >
                         <optgroup label="Camarotes">
                           {VALID_IDS.filter((id) => isCamarote(id)).map((id) => (
@@ -3000,7 +3000,7 @@ async function exportarRelatorioAnexos() {
                       <input
                         value={editNome}
                         onChange={(e) => setEditNome(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                        className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
                       />
                     </div>
 
@@ -3009,7 +3009,7 @@ async function exportarRelatorioAnexos() {
                       <input
                         value={editTelefone}
                         onChange={(e) => setEditTelefone(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                        className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
                       />
                     </div>
 
@@ -3019,7 +3019,7 @@ async function exportarRelatorioAnexos() {
                         type="date"
                         value={editData}
                         onChange={(e) => setEditData(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                        className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
                       />
                     </div>
 
@@ -3029,7 +3029,7 @@ async function exportarRelatorioAnexos() {
                         <select
                           value={editTipo}
                           onChange={(e) => setEditTipo(e.target.value as Tipo)}
-                          className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                          className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
                         >
                           <option value="aniversario">Aniversário</option>
                           <option value="cortesia">Cortesia</option>
@@ -3043,7 +3043,7 @@ async function exportarRelatorioAnexos() {
                         <select
                           value={editStatus}
                           onChange={(e) => setEditStatus(e.target.value as Status)}
-                          className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                          className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
                         >
                           <option value="pendente">Pendente</option>
                           <option value="aprovado_venda">Aprovado venda antecipada</option>
@@ -3061,7 +3061,7 @@ async function exportarRelatorioAnexos() {
                           <input
                             value={editModeloPreco}
                             onChange={(e) => setEditModeloPreco(e.target.value)}
-                            className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                            className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
                           />
                         </div>
 
@@ -3074,7 +3074,7 @@ async function exportarRelatorioAnexos() {
                               step="0.01"
                               value={editValorEspaco}
                               onChange={(e) => setEditValorEspaco(e.target.value)}
-                              className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                              className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
                             />
                           </div>
 
@@ -3086,7 +3086,7 @@ async function exportarRelatorioAnexos() {
                               step="0.01"
                               value={editValorSinal}
                               onChange={(e) => setEditValorSinal(e.target.value)}
-                              className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                              className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
                             />
                           </div>
                         </div>
@@ -3099,7 +3099,7 @@ async function exportarRelatorioAnexos() {
                         value={editObservacao}
                         onChange={(e) => setEditObservacao(e.target.value)}
                         rows={4}
-                        className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                        className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
                       />
                     </div>
 
@@ -3107,7 +3107,7 @@ async function exportarRelatorioAnexos() {
                       <button
                         onClick={salvarEdicaoReserva}
                         disabled={updatingId === String(reservaSelecionada.id)}
-                        className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-55"
+                        className="rounded-none bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-55"
                       >
                         {updatingId === String(reservaSelecionada.id) ? 'Salvando…' : 'Salvar edição'}
                       </button>
@@ -3117,7 +3117,7 @@ async function exportarRelatorioAnexos() {
                           popularFormularioEdicao(reservaSelecionada)
                           setEditMode(false)
                         }}
-                        className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                        className="rounded-none border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
                       >
                         Cancelar edição
                       </button>
@@ -3126,30 +3126,30 @@ async function exportarRelatorioAnexos() {
                 )}
               </div>
 
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 xl:col-span-1">
+              <div className="rounded-none border border-neutral-200 bg-neutral-50 p-4 xl:col-span-1">
                 <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-500">Complementar sinal</h4>
 
                 <div className="mt-4 space-y-3">
-                  <div className="rounded-xl border border-neutral-200 bg-white p-3">
+                  <div className="rounded-none border border-neutral-200 bg-white p-3">
                     <div className="text-xs text-neutral-500">Tipo da reserva</div>
                     <div className="mt-1 font-medium text-neutral-900">{labelTipo(reservaSelecionada.tipo)}</div>
                   </div>
 
-                  <div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
+                  <div className="rounded-none border border-blue-200 bg-blue-50 p-3">
                     <div className="text-xs text-blue-700">Valor total</div>
                     <div className="mt-1 font-semibold text-blue-900">
                       {Number(reservaSelecionada.valor_espaco ?? 0) > 0 ? formatCurrencyBR(reservaSelecionada.valor_espaco) : '—'}
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                  <div className="rounded-none border border-emerald-200 bg-emerald-50 p-3">
                     <div className="text-xs text-emerald-700">Sinal atual</div>
                     <div className="mt-1 font-semibold text-emerald-900">
                       {Number(reservaSelecionada.valor_sinal ?? 0) > 0 ? formatCurrencyBR(reservaSelecionada.valor_sinal) : formatCurrencyBR(0)}
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-3">
+                  <div className="rounded-none border border-yellow-200 bg-yellow-50 p-3">
                     <div className="text-xs text-yellow-700">Falta receber</div>
                     <div className="mt-1 font-semibold text-yellow-900">
                       {isTipoFinanceiro(reservaSelecionada.tipo) ? formatCurrencyBR(valorFaltaReceber(reservaSelecionada)) : '—'}
@@ -3167,7 +3167,7 @@ async function exportarRelatorioAnexos() {
                           value={addSinalValor}
                           onChange={(e) => setAddSinalValor(e.target.value)}
                           placeholder="Ex: 200.00"
-                          className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
+                          className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 outline-none focus:border-neutral-400"
                         />
                       </div>
 
@@ -3176,27 +3176,27 @@ async function exportarRelatorioAnexos() {
                         <input
                           type="file"
                           onChange={(e) => setAddSinalArquivo(e.target.files?.[0] || null)}
-                          className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-neutral-400"
+                          className="mt-1 w-full rounded-none border border-neutral-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-neutral-400"
                         />
                       </div>
 
                       <button
                         onClick={adicionarAoSinalReserva}
                         disabled={updatingId === String(reservaSelecionada.id)}
-                        className="w-full rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-55"
+                        className="w-full rounded-none bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-55"
                       >
                         {updatingId === String(reservaSelecionada.id) ? 'Salvando…' : 'Adicionar ao sinal'}
                       </button>
                     </>
                   ) : (
-                    <div className="rounded-xl border border-neutral-200 bg-white p-3 text-sm text-neutral-500">
+                    <div className="rounded-none border border-neutral-200 bg-white p-3 text-sm text-neutral-500">
                       O complemento de sinal só fica disponível para reservas financeiras.
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 xl:col-span-1">
+              <div className="rounded-none border border-neutral-200 bg-neutral-50 p-4 xl:col-span-1">
                 <div className="mb-3 flex items-center justify-between">
                   <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-500">Histórico de ações</h4>
 
@@ -3210,9 +3210,9 @@ async function exportarRelatorioAnexos() {
                 </div>
 
                 {loadingLogs ? (
-                  <div className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-500">Carregando histórico...</div>
+                  <div className="rounded-none border border-neutral-200 bg-white p-4 text-sm text-neutral-500">Carregando histórico...</div>
                 ) : logsReserva.length === 0 ? (
-                  <div className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-500">
+                  <div className="rounded-none border border-neutral-200 bg-white p-4 text-sm text-neutral-500">
                     Nenhum histórico encontrado para esta reserva.
                   </div>
                 ) : (
@@ -3224,7 +3224,7 @@ async function exportarRelatorioAnexos() {
                           <div className="absolute left-[4px] top-4 h-[calc(100%+0.75rem)] w-px bg-neutral-200" />
                         )}
 
-                        <div className="rounded-2xl border border-neutral-200 bg-white p-3">
+                        <div className="rounded-none border border-neutral-200 bg-white p-3">
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                               <p className="text-sm font-medium text-neutral-900">{traduzAcao(log.acao)}</p>
@@ -3261,7 +3261,7 @@ async function exportarRelatorioAnexos() {
                 <button
                   onClick={() => aprovarReserva(reservaSelecionada)}
                   disabled={updatingId === String(reservaSelecionada.id)}
-                  className={`rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-55 ${
+                  className={`rounded-none px-4 py-2 text-sm font-semibold text-white disabled:opacity-55 ${
                     normLower(reservaSelecionada.tipo) === 'venda'
                       ? 'bg-emerald-600 hover:bg-emerald-500'
                       : normLower(reservaSelecionada.tipo) === 'na_hora'
@@ -3283,7 +3283,7 @@ async function exportarRelatorioAnexos() {
                 <button
                   onClick={() => cancelarReserva(reservaSelecionada)}
                   disabled={updatingId === String(reservaSelecionada.id)}
-                  className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-55"
+                  className="rounded-none bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-55"
                 >
                   {updatingId === String(reservaSelecionada.id) ? 'Salvando…' : 'Cancelar'}
                 </button>
@@ -3296,7 +3296,7 @@ async function exportarRelatorioAnexos() {
                   if (!link) return alert('Telefone inválido/ausente para enviar WhatsApp.')
                   window.open(link, '_blank', 'noopener,noreferrer')
                 }}
-                className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                className="rounded-none border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
               >
                 WhatsApp
               </button>
@@ -3317,7 +3317,7 @@ async function exportarRelatorioAnexos() {
             aria-label="Fechar"
           />
 
-          <div className="relative w-full max-w-4xl rounded-3xl border border-neutral-200 bg-white p-5 shadow-2xl">
+          <div className="relative w-full max-w-4xl rounded-none border border-neutral-200 bg-white p-5 shadow-2xl">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <h3 className="text-lg font-semibold tracking-tight text-neutral-900">{modalTitle}</h3>
@@ -3330,7 +3330,7 @@ async function exportarRelatorioAnexos() {
                     href={modalUrl}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                    className="rounded-none border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
                   >
                     Abrir em nova aba
                   </a>
@@ -3342,22 +3342,22 @@ async function exportarRelatorioAnexos() {
                     setModalUrl(null)
                     setModalPath(null)
                   }}
-                  className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+                  className="rounded-none bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
                 >
                   Fechar
                 </button>
               </div>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+            <div className="mt-4 rounded-none border border-neutral-200 bg-neutral-50 p-3">
               {modalLoading ? (
                 <div className="p-10 text-neutral-600">Carregando comprovante…</div>
               ) : !modalUrl ? (
                 <div className="p-10 text-neutral-500">Não foi possível gerar o link do comprovante.</div>
               ) : modalPath && isPdf(modalPath) ? (
-                <iframe src={modalUrl} className="h-[70vh] w-full rounded-xl bg-white" title="Comprovante PDF" />
+                <iframe src={modalUrl} className="h-[70vh] w-full rounded-none bg-white" title="Comprovante PDF" />
               ) : (
-                <img src={modalUrl} alt="Comprovante" className="max-h-[70vh] w-full rounded-xl object-contain" />
+                <img src={modalUrl} alt="Comprovante" className="max-h-[70vh] w-full rounded-none object-contain" />
               )}
             </div>
 
