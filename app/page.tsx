@@ -1316,13 +1316,13 @@ const dataEventoFinal = dataEvento
       )}
 
       {/* HEADER GLOBAL */}
-      <header className="mb-4 border-b border-black/5 bg-white py-2.5 shadow-sm sm:mb-6 sm:py-3.5">
-        <div className="mx-auto flex max-w-[1400px] flex-col items-center gap-3 px-4 sm:gap-4 lg:flex-row lg:justify-between">
+      <header className="mb-6 border-b border-black/5 bg-white py-5 shadow-sm sm:py-4">
+        <div className="mx-auto flex max-w-[1400px] flex-col items-center gap-6 px-4 lg:flex-row lg:justify-between">
           <div className="flex justify-center lg:justify-start">
             <img 
               src="/looby-infinity.svg" 
               alt="Looby" 
-              className="h-8 w-auto sm:h-12" 
+              className="h-10 w-auto sm:h-12" 
             />
           </div>
 
@@ -1486,7 +1486,7 @@ const dataEventoFinal = dataEvento
 
           <div className="order-1 min-w-0 xl:order-2">
             <div className={RED_CARD}>
-              <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mb-5 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-col gap-1">
                   <h1 className="text-xl font-black uppercase tracking-tighter text-white sm:text-2xl">
                     Mapa de Reservas
