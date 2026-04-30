@@ -571,53 +571,83 @@ function ReservationCard({
             <Pill tone={statusTone(r.status)}>{statusBadgeText(r.status)}</Pill>
           </div>
 
-          <div className="mt-3 space-y-2">
-            <div className="text-base font-medium text-neutral-900">{r.nome}</div>
-            <div className="text-sm text-neutral-600">{r.telefone}</div>
-          </div>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Pill tone="blue">{labelTipo(r.tipo)}</Pill>
-            {modeloPrecoText ? <Pill tone="blue">Modelo: {modeloPrecoText}</Pill> : null}
-            {bebidaText && compact ? <Pill tone="orange">Bebida: {bebidaText}</Pill> : null}
-            {temValorEspaco && compact ? <Pill tone="blue">Valor: {formatCurrencyBR(r.valor_espaco)}</Pill> : null}
-            {temValorSinal && compact ? <Pill tone="green">Sinal: {formatCurrencyBR(r.valor_sinal)}</Pill> : null}
-            {mostrarFinanceiro && compact && (isAprovadoVenda(r.status) || isAprovadoNaHora(r.status)) ? (
-              <Pill tone="yellow">Falta: {formatCurrencyBR(faltaReceber)}</Pill>
-            ) : null}
-            <Pill tone="blue">Resp: {solicitanteNome ?? (r.user_id ? r.user_id.slice(0, 8) : '—')}</Pill>
-            {hasObsText && compact ? <Pill>Observação</Pill> : null}
-            {hasAnyFile && compact ? <Pill>{totalAnexos > 1 ? `Anexos (${totalAnexos})` : 'Anexo'}</Pill> : null}
-            {r.created_at && compact ? <Pill tone="yellow">Pedido: {formatarDataHora(r.created_at)}</Pill> : null}
-          </div>
-
-          {!compact && (hasObsText || hasFile || temValorSinal || temValorEspaco || bebidaText) ? (
+          {compact && (
             <div className="mt-3 space-y-2">
+              <div className="text-base font-medium text-neutral-900">{r.nome}</div>
+              <div className="text-sm text-neutral-600">{r.telefone}</div>
+            </div>
+          )}
+
+          {compact && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Pill tone="blue">{labelTipo(r.tipo)}</Pill>
+              {modeloPrecoText ? <Pill tone="blue">Modelo: {modeloPrecoText}</Pill> : null}
+              {bebidaText ? <Pill tone="orange">Bebida: {bebidaText}</Pill> : null}
+              {temValorEspaco ? <Pill tone="blue">Valor: {formatCurrencyBR(r.valor_espaco)}</Pill> : null}
+              {temValorSinal ? <Pill tone="green">Sinal: {formatCurrencyBR(r.valor_sinal)}</Pill> : null}
+              {mostrarFinanceiro && (isAprovadoVenda(r.status) || isAprovadoNaHora(r.status)) ? (
+                <Pill tone="yellow">Falta: {formatCurrencyBR(faltaReceber)}</Pill>
+              ) : null}
+              <Pill tone="blue">Resp: {solicitanteNome ?? (r.user_id ? r.user_id.slice(0, 8) : '—')}</Pill>
+              {hasObsText ? <Pill>Observação</Pill> : null}
+              {hasAnyFile ? <Pill>{totalAnexos > 1 ? `Anexos (${totalAnexos})` : 'Anexo'}</Pill> : null}
+              {r.created_at ? <Pill tone="yellow">Pedido: {formatarDataHora(r.created_at)}</Pill> : null}
+            </div>
+          )}
+
+          {!compact ? (
+            <div className="mt-4 space-y-2">
+              <div className="rounded-none border border-neutral-200 bg-neutral-50 px-3 py-2">
+                <div className="text-xs text-neutral-500">Nome do cliente</div>
+                <div className="mt-1 text-sm font-semibold text-neutral-800">{r.nome}</div>
+              </div>
+
+              <div className="rounded-none border border-neutral-200 bg-neutral-50 px-3 py-2">
+                <div className="text-xs text-neutral-500">Telefone</div>
+                <div className="mt-1 text-sm font-semibold text-neutral-800">{r.telefone}</div>
+              </div>
+
+              <div className="rounded-none border border-neutral-200 bg-neutral-50 px-3 py-2">
+                <div className="text-xs text-neutral-500">Tipo da Reserva</div>
+                <div className="mt-1 text-sm font-semibold text-neutral-800">{labelTipo(r.tipo)}</div>
+              </div>
+
+              {modeloPrecoText ? (
+                <div className="rounded-none border border-neutral-200 bg-neutral-50 px-3 py-2">
+                  <div className="text-xs text-neutral-500">Modelo</div>
+                  <div className="mt-1 text-sm font-semibold text-neutral-800">{modeloPrecoText}</div>
+                </div>
+              ) : null}
+
+              <div className="rounded-none border border-neutral-200 bg-neutral-50 px-3 py-2">
+                <div className="text-xs text-neutral-500">Responsável</div>
+                <div className="mt-1 text-sm font-semibold text-neutral-800">{solicitanteNome ?? (r.user_id ? r.user_id.slice(0, 8) : '—')}</div>
+              </div>
               {bebidaText ? (
-                <div className="rounded-none border border-orange-200 bg-orange-50 px-3 py-2">
-                  <div className="text-xs text-orange-700">Bebida destinada</div>
-                  <div className="mt-1 text-sm font-semibold text-orange-900">{bebidaText}</div>
+                <div className="rounded-none border border-neutral-200 bg-neutral-50 px-3 py-2">
+                  <div className="text-xs text-neutral-500">Bebida destinada</div>
+                  <div className="mt-1 text-sm font-semibold text-neutral-800">{bebidaText}</div>
                 </div>
               ) : null}
 
               {temValorEspaco ? (
-                <div className="rounded-none border border-blue-200 bg-blue-50 px-3 py-2">
-                  <div className="text-xs text-blue-700">Valor da mesa/camarote</div>
-                  <div className="mt-1 text-sm font-semibold text-blue-900">{formatCurrencyBR(r.valor_espaco)}</div>
+                <div className="rounded-none border border-neutral-200 bg-neutral-50 px-3 py-2">
+                  <div className="text-xs text-neutral-500">Valor da mesa/camarote</div>
+                  <div className="mt-1 text-sm font-semibold text-neutral-800">{formatCurrencyBR(r.valor_espaco)}</div>
                 </div>
               ) : null}
 
               {temValorSinal ? (
-                <div className="rounded-none border border-emerald-200 bg-emerald-50 px-3 py-2">
-                  <div className="text-xs text-emerald-700">Valor de sinal adiantado</div>
-                  <div className="mt-1 text-sm font-semibold text-emerald-900">{formatCurrencyBR(r.valor_sinal)}</div>
+                <div className="rounded-none border border-neutral-200 bg-neutral-50 px-3 py-2">
+                  <div className="text-xs text-neutral-500">Valor de sinal adiantado</div>
+                  <div className="mt-1 text-sm font-semibold text-neutral-800">{formatCurrencyBR(r.valor_sinal)}</div>
                 </div>
               ) : null}
 
               {mostrarFinanceiro && (isAprovadoVenda(r.status) || isAprovadoNaHora(r.status)) ? (
-                <div className="rounded-none border border-yellow-200 bg-yellow-50 px-3 py-2">
-                  <div className="text-xs text-yellow-700">Falta receber na hora</div>
-                  <div className="mt-1 text-sm font-semibold text-yellow-900">{formatCurrencyBR(faltaReceber)}</div>
+                <div className="rounded-none border border-neutral-200 bg-neutral-50 px-3 py-2">
+                  <div className="text-xs text-neutral-500">Falta receber na hora</div>
+                  <div className="mt-1 text-sm font-semibold text-neutral-800">{formatCurrencyBR(faltaReceber)}</div>
                 </div>
               ) : null}
 
@@ -2554,7 +2584,6 @@ async function exportarRelatorioAnexos() {
                           onVerComprovante={() => abrirComprovante(r)}
                           onVerDetalhes={() => abrirDetalhesReserva(r)}
                           solicitanteNome={r.user_id ? profileNameById.get(r.user_id) : undefined}
-                          compact
                         />
                       ))
                     )}
@@ -2855,7 +2884,7 @@ async function exportarRelatorioAnexos() {
             )}
 
             {historicoCliente && (
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="mt-4 flex flex-col gap-3">
                 <div className="rounded-none border border-blue-200 bg-blue-50 p-4 shadow-sm">
                   <div className="flex items-center gap-2 text-sm font-bold text-blue-900">
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] text-white">i</span>
@@ -2880,8 +2909,8 @@ async function exportarRelatorioAnexos() {
               </div>
             )}
 
-            <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-3">
-              <div className="rounded-none border border-neutral-200 bg-neutral-50 p-4 xl:col-span-1">
+            <div className="mt-5 flex flex-col gap-4">
+              <div className="rounded-none border border-neutral-200 bg-neutral-50 p-4">
                 <div className="mb-4 flex items-center justify-between">
                   <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-500">Dados da reserva</h4>
 
@@ -3126,7 +3155,7 @@ async function exportarRelatorioAnexos() {
                 )}
               </div>
 
-              <div className="rounded-none border border-neutral-200 bg-neutral-50 p-4 xl:col-span-1">
+              <div className="rounded-none border border-neutral-200 bg-neutral-50 p-4">
                 <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-500">Complementar sinal</h4>
 
                 <div className="mt-4 space-y-3">
@@ -3196,7 +3225,7 @@ async function exportarRelatorioAnexos() {
                 </div>
               </div>
 
-              <div className="rounded-none border border-neutral-200 bg-neutral-50 p-4 xl:col-span-1">
+              <div className="rounded-none border border-neutral-200 bg-neutral-50 p-4">
                 <div className="mb-3 flex items-center justify-between">
                   <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-500">Histórico de ações</h4>
 
