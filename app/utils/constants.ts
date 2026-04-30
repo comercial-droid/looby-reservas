@@ -24,9 +24,9 @@ export const OPCOES_BEBIDA_CORTESIA_FALLBACK = [
 ]
 
 export const RED_CARD =
-  'rounded-2xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.28)]'
+  'rounded-none border border-white/10 bg-white/10 backdrop-blur-xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.3)]'
 export const RED_CARD_LIGHT =
-  'rounded-2xl border border-red-900/60 bg-gradient-to-br from-[#5b1019] via-[#741824] to-[#3f0b12] p-4 sm:p-6 shadow-[0_18px_40px_rgba(0,0,0,0.28)]'
+  'rounded-none border border-white/10 bg-white/10 backdrop-blur-xl p-4 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)]'
 export const RED_INNER =
   'rounded-xl border border-white/10 bg-white/8 backdrop-blur-sm'
 export const INPUT_CLASS =

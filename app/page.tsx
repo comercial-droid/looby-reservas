@@ -1267,7 +1267,12 @@ const dataEventoFinal = dataEvento
   }
 
   return (
-    <div className="min-h-svh overflow-x-hidden bg-[radial-gradient(circle_at_top,#4f111a_0%,#18090c_45%,#090406_100%)] px-3 py-4 text-red-50 sm:px-4 sm:py-6">
+    <div className="relative min-h-svh overflow-x-hidden text-red-50">
+      {/* Background Image with Overlay */}
+      <div 
+        className="fixed inset-0 -z-10 bg-[url('/background.png')] bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.95)), url('/background.png')" }}
+      />
       {/* MODAL DE SUCESSO - WHATSAPP (FORA DO CONTEXTO DO MAPA PARA GARANTIR VISIBILIDADE) */}
       {showSuccessWpp && lastPayload && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
@@ -1310,58 +1315,63 @@ const dataEventoFinal = dataEvento
         </div>
       )}
 
-      <div className="mx-auto max-w-[1400px]">
-        <div className="mb-5 flex flex-col gap-4 border-b border-white/10 pb-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-              <h1 className="flex min-w-0 items-center gap-3 text-xl font-bold sm:text-2xl">
-                <img src="/logo-looby.png" alt="Looby" className="h-10 w-auto sm:h-12" />
-                <span className="truncate">Mapa de Reservas</span>
-              </h1>
+      {/* HEADER GLOBAL */}
+      <header className="mb-6 border-b border-black/5 bg-white py-3.5 shadow-sm">
+        <div className="mx-auto flex max-w-[1400px] flex-col items-center gap-4 px-4 lg:flex-row lg:justify-between">
+          <div className="flex justify-center lg:justify-start">
+            <img 
+              src="/looby-infinity.svg" 
+              alt="Looby" 
+              className="h-10 w-auto sm:h-12" 
+            />
+          </div>
 
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-red-50/85">
-                  {dataEvento}
-                </span>
-
-                {vendaNaHoraAtiva ? (
-                  <span className="rounded-full border border-sky-300/30 bg-sky-400/15 px-3 py-1 text-xs text-sky-100">
-                    Janela: venda na hora
-                  </span>
-                ) : null}
-              </div>
+          <div className="flex flex-row flex-wrap items-center justify-center gap-4 lg:justify-end">
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Evento:</span>
+              <input 
+                type="date" 
+                value={dataEvento} 
+                onChange={(e) => setDataEvento(e.target.value)}
+                className="rounded-full border border-[#5b1019]/10 bg-[#5b1019]/5 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#5b1019] outline-none transition-all hover:border-[#5b1019]/30 hover:bg-white focus:border-[#5b1019] focus:ring-2 focus:ring-[#5b1019]/10"
+              />
             </div>
 
-            <p className="mt-2 text-sm leading-6 text-red-50/70">
-              Clique em um espaço para solicitar reserva ou visualizar detalhes.
-            </p>
-
-            <button
-              onClick={() => setStep('DATA')}
-              className="mt-2 text-left text-sm text-red-50/70 underline underline-offset-4 hover:text-white"
+            <nav className="flex flex-row flex-wrap items-center justify-center gap-3">
+            <button 
+              onClick={() => router.push('/minhas-reservas')} 
+              className="px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-[#5b1019] border border-[#5b1019]/20 bg-[#5b1019]/5 transition-all hover:bg-[#5b1019] hover:text-white"
             >
-              ← Escolher outra data
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:justify-end">
-            <button onClick={() => router.push('/minhas-reservas')} className={`${SECONDARY_BTN} w-full`}>
-              Meu relatório
+              Relatório
             </button>
 
-            {isAdmin ? (
-              <button onClick={() => router.push('/admin')} className={`${SECONDARY_BTN} w-full`}>
-                Voltar Admin
+            {isAdmin && (
+              <button 
+                onClick={() => router.push('/admin')} 
+                className="px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-[#5b1019] border border-[#5b1019]/20 bg-[#5b1019]/5 transition-all hover:bg-[#5b1019] hover:text-white"
+              >
+                Painel Admin
               </button>
-            ) : null}
+            )}
 
-            <button onClick={sair} className={`${PRIMARY_BTN} w-full`}>
+            <button 
+              onClick={sair} 
+              className="px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-red-600 border border-red-200 bg-red-50 transition-all hover:bg-red-600 hover:text-white"
+            >
               Sair
             </button>
-          </div>
+          </nav>
         </div>
+      </div>
+    </header>
 
-        <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="px-3 pb-6 sm:px-4 sm:pb-8">
+
+      <div className="mx-auto max-w-[1400px] px-4">
+        {/* CABEÇALHO DO MAPA - CENTRALIZADO RELATIVO AO MAPA NO DESKTOP */}
+        {/* O título foi movido para dentro do card do mapa */}
+
+        <div className="grid grid-cols-1 items-start gap-1 xl:grid-cols-[320px_minmax(0,1fr)]">
           <div className="order-2 space-y-4 xl:order-1">
             <div className={RED_CARD}>
               <div className="flex items-center justify-between gap-3">
@@ -1475,12 +1485,22 @@ const dataEventoFinal = dataEvento
           </div>
 
           <div className="order-1 min-w-0 xl:order-2">
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/6 p-3 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-sm sm:p-4">
+            <div className={RED_CARD}>
               <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-xs leading-5 text-red-50/70">
-                  {isTouchDevice
-                    ? 'No celular: toque nos espaços e use os botões + / - para zoom.'
-                    : 'No desktop: use o mouse para hover, roda para zoom e clique para interagir.'}
+                <div className="flex flex-col gap-1">
+                  <h1 className="text-xl font-black uppercase tracking-tighter text-white sm:text-2xl">
+                    Mapa de Reservas
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-white shadow-sm">
+                      {dataEvento}
+                    </span>
+                    {vendaNaHoraAtiva && (
+                      <span className="rounded-full bg-sky-500/20 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-sky-300 shadow-sm">
+                        Venda na Hora
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
@@ -1924,5 +1944,6 @@ const dataEventoFinal = dataEvento
         ) : null}
       </div>
     </div>
+  </div>
   )
 }

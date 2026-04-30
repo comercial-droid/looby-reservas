@@ -64,17 +64,17 @@ function labelStatus(status: string) {
 
 function toneStatus(status: string) {
   const s = normLower(status)
-  if (s === 'pendente') return 'bg-yellow-400/15 text-yellow-200 border-yellow-400/25'
-  if (s === 'aprovado_venda') return 'bg-green-400/15 text-green-200 border-green-400/25'
-  if (s === 'aprovado_cortesia') return 'bg-orange-400/15 text-orange-200 border-orange-400/25'
-  if (s === 'cancelado') return 'bg-red-400/15 text-red-200 border-red-400/25'
-  return 'bg-white/5 text-neutral-200 border-white/10'
+  if (s === 'pendente') return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+  if (s === 'aprovado_venda') return 'bg-green-100 text-green-800 border-green-200'
+  if (s === 'aprovado_cortesia') return 'bg-orange-100 text-orange-800 border-orange-200'
+  if (s === 'cancelado') return 'bg-red-100 text-red-800 border-red-200'
+  return 'bg-neutral-100 text-neutral-800 border-neutral-200'
 }
 
 function toneTipo(tipo: string) {
   const t = normLower(tipo)
-  if (t === 'venda') return 'bg-green-400/15 text-green-200 border-green-400/25'
-  return 'bg-orange-400/15 text-orange-200 border-orange-400/25'
+  if (t === 'venda') return 'bg-blue-100 text-blue-800 border-blue-200'
+  return 'bg-purple-100 text-purple-800 border-purple-200'
 }
 
 function formatCreatedAtBR(dateValue?: string) {
@@ -99,10 +99,10 @@ function StatCard({
   hint?: string
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.25)]">
-      <div className="text-xs text-white/60">{title}</div>
-      <div className="mt-1 break-words text-2xl font-semibold tracking-tight sm:text-3xl">{value}</div>
-      {hint ? <div className="mt-1 text-xs leading-5 text-white/45">{hint}</div> : null}
+    <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+      <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{title}</div>
+      <div className="mt-1 break-words text-2xl font-black tracking-tight text-neutral-900 sm:text-3xl">{value}</div>
+      {hint ? <div className="mt-1 text-[10px] leading-relaxed text-neutral-400">{hint}</div> : null}
     </div>
   )
 }
@@ -262,42 +262,42 @@ export default function MinhasReservasPage() {
   }
 
   if (authChecking) {
-    return <div className="min-h-svh bg-neutral-950 p-8 text-white">Verificando login…</div>
+    return <div className="min-h-svh bg-white p-8 text-neutral-500">Verificando login…</div>
   }
 
   return (
-    <div className="min-h-svh bg-neutral-950 text-white">
-      <div className="border-b border-white/10 bg-neutral-950">
+    <div className="min-h-svh bg-neutral-50 text-neutral-900">
+      <div className="border-b border-black/5 bg-white shadow-sm">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <h1 className="text-lg font-semibold tracking-tight sm:text-2xl">
+              <h1 className="text-lg font-semibold tracking-tight text-neutral-900 sm:text-2xl">
                 Meu relatório
               </h1>
-              <p className="mt-1 break-words text-xs text-white/60 sm:text-sm">
-                Usuário: <span className="font-semibold text-white">{userName}</span>
+              <p className="mt-1 break-words text-xs text-neutral-500 sm:text-sm">
+                Usuário: <span className="font-semibold text-neutral-900">{userName}</span>
               </p>
-              {erroUi ? <p className="mt-2 text-xs text-red-300 sm:text-sm">{erroUi}</p> : null}
+              {erroUi ? <p className="mt-2 text-xs text-red-600 sm:text-sm">{erroUi}</p> : null}
             </div>
 
-            <div className="grid grid-cols-3 gap-2 lg:w-auto">
+            <div className="flex flex-wrap items-center justify-end gap-3 lg:w-auto">
               <button
                 onClick={() => router.push('/')}
-                className="inline-flex min-h-[40px] items-center justify-center rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/15 sm:min-h-[44px] sm:px-4 sm:text-sm"
+                className="px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-[#5b1019] border border-[#5b1019]/20 bg-[#5b1019]/5 transition-all hover:bg-[#5b1019] hover:text-white"
               >
                 Voltar
               </button>
 
               <button
                 onClick={fetchRows}
-                className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2 text-xs font-semibold hover:bg-white/[0.07] sm:min-h-[44px] sm:px-4 sm:text-sm"
+                className="px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-[#5b1019] border border-[#5b1019]/20 bg-[#5b1019]/5 transition-all hover:bg-[#5b1019] hover:text-white"
               >
                 Atualizar
               </button>
 
               <button
                 onClick={sair}
-                className="inline-flex min-h-[40px] items-center justify-center rounded-xl bg-neutral-800 px-3 py-2 text-xs font-semibold hover:bg-neutral-700 sm:min-h-[44px] sm:px-4 sm:text-sm"
+                className="px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-red-600 border border-red-200 bg-red-50 transition-all hover:bg-red-600 hover:text-white"
               >
                 Sair
               </button>
@@ -306,31 +306,31 @@ export default function MinhasReservasPage() {
 
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-12 md:gap-3">
             <div className="sm:col-span-1 md:col-span-3">
-              <label className="text-[11px] text-white/55 sm:text-xs">De</label>
+              <label className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 sm:text-xs">De</label>
               <input
                 type="date"
                 value={dataInicial}
                 onChange={(e) => setDataInicial(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-[16px] outline-none focus:border-white/25 sm:py-3"
+                className="mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-[16px] text-neutral-900 outline-none focus:border-[#5b1019]/30 sm:py-3"
               />
             </div>
 
             <div className="sm:col-span-1 md:col-span-3">
-              <label className="text-[11px] text-white/55 sm:text-xs">Até</label>
+              <label className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 sm:text-xs">Até</label>
               <input
                 type="date"
                 value={dataFinal}
                 onChange={(e) => setDataFinal(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-[16px] outline-none focus:border-white/25 sm:py-3"
+                className="mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-[16px] text-neutral-900 outline-none focus:border-[#5b1019]/30 sm:py-3"
               />
             </div>
 
             <div className="sm:col-span-1 md:col-span-3">
-              <label className="text-[11px] text-white/55 sm:text-xs">Tipo</label>
+              <label className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 sm:text-xs">Tipo</label>
               <select
                 value={tipoFiltro}
                 onChange={(e) => setTipoFiltro(e.target.value as any)}
-                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-[16px] outline-none focus:border-white/25 sm:py-3"
+                className="mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-[16px] text-neutral-900 outline-none focus:border-[#5b1019]/30 sm:py-3"
               >
                 <option value="todas">Todos</option>
                 <option value="venda">Venda</option>
@@ -340,11 +340,11 @@ export default function MinhasReservasPage() {
             </div>
 
             <div className="sm:col-span-1 md:col-span-3">
-              <label className="text-[11px] text-white/55 sm:text-xs">Status</label>
+              <label className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 sm:text-xs">Status</label>
               <select
                 value={statusFiltro}
                 onChange={(e) => setStatusFiltro(e.target.value as any)}
-                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-[16px] outline-none focus:border-white/25 sm:py-3"
+                className="mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-[16px] text-neutral-900 outline-none focus:border-[#5b1019]/30 sm:py-3"
               >
                 <option value="todos">Todos</option>
                 <option value="pendente">Pendentes</option>
@@ -354,12 +354,12 @@ export default function MinhasReservasPage() {
             </div>
 
             <div className="sm:col-span-2 md:col-span-3">
-              <label className="text-[11px] text-white/55 sm:text-xs">Buscar</label>
+              <label className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 sm:text-xs">Buscar</label>
               <input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="João, C4, M13..."
-                className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-[16px] outline-none focus:border-white/25 sm:py-3"
+                className="mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-[16px] text-neutral-900 outline-none focus:border-[#5b1019]/30 sm:py-3"
               />
             </div>
           </div>
@@ -376,21 +376,21 @@ export default function MinhasReservasPage() {
           <StatCard title="Cortesia/Aniv" value={computed.cortesias + computed.aniversarios} />
         </div>
 
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.25)] sm:p-5">
+        <div className="rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div>
-              <h2 className="text-lg font-semibold tracking-tight">Reservas do período</h2>
-              <p className="mt-1 text-sm text-white/55">Lista filtrada (por você).</p>
+              <h2 className="text-lg font-black uppercase tracking-tighter text-neutral-900">Reservas do período</h2>
+              <p className="mt-1 text-sm text-neutral-400">Lista filtrada conforme suas preferências.</p>
             </div>
           </div>
 
           <div className="mt-4">
             {loading ? (
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-6 text-sm text-white/70">
+              <div className="rounded-2xl border border-neutral-100 bg-neutral-50 p-6 text-sm text-neutral-400">
                 Carregando…
               </div>
             ) : rows.length === 0 ? (
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-6 text-sm text-white/55">
+              <div className="rounded-2xl border border-neutral-100 bg-neutral-50 p-6 text-sm text-neutral-400">
                 Nenhuma reserva encontrada para os filtros atuais.
               </div>
             ) : (
@@ -402,53 +402,53 @@ export default function MinhasReservasPage() {
                   return (
                     <div
                       key={String(r.id)}
-                      className="rounded-2xl border border-white/10 bg-black/25 p-4 shadow-[0_14px_30px_rgba(0,0,0,0.22)]"
+                      className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm"
                     >
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <div className="text-base font-semibold tracking-tight break-words">
+                            <div className="text-base font-black uppercase tracking-tight text-neutral-900 break-words">
                               {r.espaco_id}
                             </div>
 
-                            <span className="inline-flex items-center rounded-full border border-blue-400/25 bg-blue-400/15 px-2.5 py-1 text-xs text-blue-200">
+                            <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">
                               {r.data_evento}
                             </span>
 
-                            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs ${toneStatus(r.status)}`}>
+                            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${toneStatus(r.status)}`}>
                               {labelStatus(r.status)}
                             </span>
 
-                            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs ${toneTipo(r.tipo)}`}>
+                            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${toneTipo(r.tipo)}`}>
                               {labelTipo(r.tipo)}
                             </span>
                           </div>
 
-                          <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-white/80 sm:gap-2 md:grid-cols-2">
-                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 sm:py-2">
-                              <div className="text-xs text-white/50">Nome</div>
-                              <div className="truncate font-medium">{r.nome}</div>
+                          <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-neutral-600 sm:gap-2 md:grid-cols-2">
+                            <div className="rounded-xl border border-neutral-100 bg-neutral-50 px-3 py-3 sm:py-2">
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Nome</div>
+                              <div className="truncate font-semibold text-neutral-900">{r.nome}</div>
                             </div>
 
-                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 sm:py-2">
-                              <div className="text-xs text-white/50">Telefone</div>
-                              <div className="font-medium break-all">{r.telefone}</div>
+                            <div className="rounded-xl border border-neutral-100 bg-neutral-50 px-3 py-3 sm:py-2">
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Telefone</div>
+                              <div className="font-semibold text-neutral-900 break-all">{r.telefone}</div>
                             </div>
 
-                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 sm:py-2 md:col-span-2">
-                              <div className="text-xs text-white/50">Observação</div>
-                              <div className="mt-1 whitespace-pre-wrap break-words text-sm text-white/85">
+                            <div className="rounded-xl border border-neutral-100 bg-neutral-50 px-3 py-3 sm:py-2 md:col-span-2">
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Observação</div>
+                              <div className="mt-1 whitespace-pre-wrap break-words text-sm text-neutral-700">
                                 {String(r.observacao ?? '').trim() ? (
                                   r.observacao
                                 ) : (
-                                  <span className="text-white/45">—</span>
+                                  <span className="text-neutral-300">—</span>
                                 )}
                               </div>
                             </div>
                           </div>
 
                           {r.created_at ? (
-                            <div className="mt-3 text-xs text-white/45">
+                            <div className="mt-3 text-[10px] text-neutral-400">
                               Criado em: {formatCreatedAtBR(r.created_at)}
                             </div>
                           ) : null}

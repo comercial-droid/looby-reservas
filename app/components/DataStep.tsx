@@ -27,39 +27,32 @@ export function DataStep({
 
   return (
     <div className="flex min-h-svh items-center justify-center bg-[radial-gradient(circle_at_top,#4f111a_0%,#18090c_55%,#090406_100%)] px-4 py-6 text-red-50 sm:p-6">
-      <div className={`w-full max-w-xl ${RED_CARD_LIGHT}`}>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold text-white sm:text-3xl">Reservas — Looby</h1>
-            <p className={`mt-2 text-sm leading-6 sm:text-base ${SOFT_TEXT}`}>
+      <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-black/80 p-8 shadow-[0_30px_100px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:p-10">
+        <div className="mb-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex justify-center sm:justify-start">
+            <img src="/looby-infinity.svg" alt="Looby" className="h-[100px] w-auto drop-shadow-[0_0_20px_rgba(255,255,255,0.1)] sm:h-[120px]" />
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center text-center">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-black uppercase tracking-tighter text-white sm:text-2xl">Reservas</h1>
+            <p className={`mt-2 text-sm leading-relaxed sm:text-base ${SOFT_TEXT}`}>
               {vendaNaHoraAtiva ? (
                 <>
-                  Janela operacional ativa. Para a data de {dataEventoOperacional}, o sistema permite apenas venda na hora. Para datas futuras, você pode fazer reserva antecipada.
+                  Janela operacional ativa. Para <b className="text-white">{dataEventoOperacional}</b>, permitimos apenas venda na hora.
                 </>
               ) : (
                 <>
-                  Escolha a <b className="text-white">data do evento</b> e depois selecione o espaço no mapa.
+                  Escolha a <b className="text-white">data do evento</b> para acessar o mapa de espaços.
                 </>
               )}
             </p>
           </div>
 
-          <button onClick={sair} className={`${PRIMARY_BTN} w-full sm:w-auto`}>
-            Sair
-          </button>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
-          <button onClick={() => router.push('/minhas-reservas')} className={`${SECONDARY_BTN} w-full sm:w-auto`}>
-            Meu relatório
-          </button>
 
-          {isAdmin ? (
-            <button onClick={() => router.push('/admin')} className={`${SECONDARY_BTN} w-full sm:w-auto`}>
-              Admin
-            </button>
-          ) : null}
-        </div>
 
         <div className="mt-6 space-y-2">
           <label className={LABEL_CLASS}>Data do evento</label>
@@ -96,7 +89,22 @@ export function DataStep({
           Avançar para o mapa
         </button>
 
-        <p className="mt-4 text-xs leading-5 text-red-50/55">
+        <div className="mt-8 flex items-center justify-center gap-6">
+          <button
+            onClick={() => router.push('/minhas-reservas')}
+            className="text-[10px] font-bold uppercase tracking-widest text-red-50/70 underline underline-offset-4 transition-colors hover:text-white"
+          >
+            Relatório
+          </button>
+          <button
+            onClick={sair}
+            className="text-[10px] font-bold uppercase tracking-widest text-red-400 underline underline-offset-4 transition-colors hover:text-red-200"
+          >
+            Sair
+          </button>
+        </div>
+
+        <p className="mt-6 text-center text-[10px] leading-relaxed text-red-50/30">
           (O mapa busca reservas dessa data no Supabase.)
         </p>
       </div>
