@@ -7,6 +7,21 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { VALID_IDS } from '@/app/utils/constants'
 import { gerarMensagemReserva, compartilharReservaWhatsApp } from '@/app/utils/helpers'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area,
+} from 'recharts'
 
 
 type Status =
@@ -779,7 +794,7 @@ function ReservationCard({
 function AdminContent() {
   const router = useRouter()
 
-  const [mainTab, setMainTab] = useState<'pendentes' | 'historico' | 'financeiro' | 'configuracoes'>('pendentes')
+  const [mainTab, setMainTab] = useState<'pendentes' | 'historico' | 'financeiro' | 'graficos' | 'configuracoes'>('pendentes')
   const [financeTab, setFinanceTab] = useState<'cobranca' | 'bebidas' | 'anexos'>('cobranca')
   const [historicoStatus, setHistoricoStatus] = useState<'todas' | 'pendentes' | 'aprovadas' | 'canceladas'>('todas')
 
@@ -2058,6 +2073,15 @@ async function exportarRelatorioAnexos() {
             >
               Financeiro
             </button>
+
+            <button
+              onClick={() => setMainTab('graficos')}
+              className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
+                mainTab === 'graficos' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+              }`}
+            >
+              Gráficos
+            </button>
           </div>
 
           <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-12">
@@ -2827,6 +2851,158 @@ async function exportarRelatorioAnexos() {
                    </>
                  ) : null}
               </>
+            ) : null}
+
+            {mainTab === 'graficos' ? (
+              <div className="space-y-6">
+                <Section title="Visão Geral em Gráficos" subtitle={`Dados baseados no período: ${periodoLabel}`}>
+                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    {/* Gráfico 1: Ranking de Usuários */}
+                    <div className="rounded-none border border-neutral-200 bg-white p-5 shadow-sm">
+                      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-neutral-500">Usuários que mais reservaram</h3>
+                      <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={rankingUsers.slice(0, 10)} layout="vertical" margin={{ left: 20, right: 30, top: 5, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                            <XAxis type="number" hide />
+                            <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
+                            <Tooltip
+                              cursor={{ fill: '#f5f5f5' }}
+                              contentStyle={{ borderRadius: '0px', border: '1px solid #e5e5e5' }}
+                            />
+                            <Bar dataKey="count" fill="#171717" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 12 }} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Gráfico 2: Tipos de Reserva */}
+                    <div className="rounded-none border border-neutral-200 bg-white p-5 shadow-sm">
+                      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-neutral-500">Distribuição por Tipos de Reserva</h3>
+                      <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={Array.from(
+                                reservas.reduce((acc, r) => {
+                                  const label = labelTipo(r.tipo)
+                                  acc.set(label, (acc.get(label) ?? 0) + 1)
+                                  return acc
+                                }, new Map<string, number>())
+                              ).map(([name, value]) => ({ name, value }))}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={100}
+                              paddingAngle={5}
+                              dataKey="value"
+                            >
+                              {Array.from(
+                                reservas.reduce((acc, r) => {
+                                  const label = labelTipo(r.tipo)
+                                  acc.set(label, (acc.get(label) ?? 0) + 1)
+                                  return acc
+                                }, new Map<string, number>())
+                              ).map((entry, index) => {
+                                let color = '#171717' // Default
+                                if (entry[0] === 'Venda antecipada') color = '#059669' // Emerald 600
+                                if (entry[0] === 'Venda na hora') color = '#2563eb'    // Blue 600
+                                if (entry[0] === 'Cortesia') color = '#f97316'         // Orange 500
+                                if (entry[0] === 'Aniversário') color = '#f59e0b'      // Amber 500
+                                return <Cell key={`cell-${index}`} fill={color} />
+                              })}
+                            </Pie>
+                            <Tooltip contentStyle={{ borderRadius: '0px', border: '1px solid #e5e5e5' }} />
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Gráfico 3: Tipos de Bebidas */}
+                    <div className="rounded-none border border-neutral-200 bg-white p-5 shadow-sm">
+                      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-neutral-500">Distribuição por Tipos de Bebidas</h3>
+                      <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={Array.from(
+                                reservas.reduce((acc, r) => {
+                                  const drink = String(r.bebida_cortesia ?? '').trim()
+                                  if (!drink || drink.toLowerCase() === 'sem bebida') return acc
+                                  acc.set(drink, (acc.get(drink) ?? 0) + 1)
+                                  return acc
+                                }, new Map<string, number>())
+                              ).map(([name, value]) => ({ name, value }))}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={100}
+                              paddingAngle={5}
+                              dataKey="value"
+                            >
+                              {Array.from(
+                                reservas.reduce((acc, r) => {
+                                  const drink = String(r.bebida_cortesia ?? '').trim()
+                                  if (!drink || drink.toLowerCase() === 'sem bebida') return acc
+                                  acc.set(drink, (acc.get(drink) ?? 0) + 1)
+                                  return acc
+                                }, new Map<string, number>())
+                              ).map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={[ '#f97316', '#f59e0b', '#fbbf24', '#fcd34d', '#fef3c7' ][index % 5]} />
+                              ))}
+                            </Pie>
+                            <Tooltip contentStyle={{ borderRadius: '0px', border: '1px solid #e5e5e5' }} />
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Gráfico 4: Sinais ao longo do tempo */}
+                    <div className="lg:col-span-2 rounded-none border border-neutral-200 bg-white p-5 shadow-sm">
+                      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-neutral-500">Sinais em Dinheiro ao Longo das Datas</h3>
+                      <div className="h-[350px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={computed.financeiroPorEvento} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="colorSinal" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis 
+                              dataKey="data_evento" 
+                              tickFormatter={(val) => formatShortDate(val)}
+                              tick={{ fontSize: 12 }}
+                            />
+                            <YAxis 
+                              tickFormatter={(val) => `R$ ${val}`}
+                              tick={{ fontSize: 12 }}
+                            />
+                            <Tooltip 
+                              formatter={(value: any) => formatCurrencyBR(value)}
+                              labelFormatter={(label) => formatBRDate(label)}
+                              contentStyle={{ borderRadius: '0px', border: '1px solid #e5e5e5' }}
+                            />
+                            <Legend />
+                            <Area
+                              type="monotone"
+                              dataKey="totalSinais"
+                              name="Total em Sinais"
+                              stroke="#10b981"
+                              fillOpacity={1}
+                              fill="url(#colorSinal)"
+                              strokeWidth={3}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                </Section>
+              </div>
             ) : null}
           </>
         )}
