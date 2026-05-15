@@ -113,6 +113,7 @@ export default function MinhasReservasPage() {
   const [authChecking, setAuthChecking] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
   const [userName, setUserName] = useState<string>('')
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   const [dataInicial, setDataInicial] = useState<string>(firstDayOfMonthISO())
   const [dataFinal, setDataFinal] = useState<string>(lastDayOfMonthISO())
@@ -138,11 +139,12 @@ export default function MinhasReservasPage() {
 
       const { data: p } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('full_name, role')
         .eq('id', u.id)
         .maybeSingle()
 
       setUserName((p as any)?.full_name ?? (u.user_metadata as any)?.full_name ?? u.email ?? 'Usuário')
+      setUserRole((p as any)?.role ?? null)
       setAuthChecking(false)
     }
 
@@ -287,6 +289,15 @@ export default function MinhasReservasPage() {
               >
                 Voltar
               </button>
+
+              {userRole === 'agenda' && (
+                <button
+                  onClick={() => router.push('/admin')}
+                  className="px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] text-orange-600 border border-orange-200 bg-orange-50 transition-all hover:bg-orange-600 hover:text-white"
+                >
+                  Relatório de Bebidas
+                </button>
+              )}
 
               <button
                 onClick={fetchRows}

@@ -805,7 +805,9 @@ function AdminContent() {
   const [erroUi, setErroUi] = useState<string | null>(null)
 
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [currentUserName, setCurrentUserName] = useState<string>('')
   const [authChecking, setAuthChecking] = useState(true)
+  const [isRestrictedView, setIsRestrictedView] = useState(false)
 
   const [profiles, setProfiles] = useState<ProfileRow[]>([])
   const profileNameById = useMemo(() => {
@@ -884,17 +886,36 @@ const [novoPrecoOrdem, setNovoPrecoOrdem] = useState('')
 
       setUserEmail(user.email ?? null)
 
-      const { data: adminRow, error: adminErr } = await supabase
+      // 1. Verifica se é admin na tabela 'admins'
+      const { data: adminRow } = await supabase
         .from('admins')
         .select('user_id')
         .eq('user_id', user.id)
         .maybeSingle()
 
-      if (adminErr || !adminRow) {
-        alert('Seu usuário não tem permissão de ADMIN para acessar este painel.')
+      // 2. Verifica o cargo no perfil
+      const { data: profileRow } = await supabase
+        .from('profiles')
+        .select('role, full_name')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      const isAgenda = profileRow?.role === 'agenda'
+
+      setCurrentUserName(profileRow?.full_name || user.email || 'Usuário')
+
+      if (!adminRow && !isAgenda) {
+        alert('Seu usuário não tem permissão para acessar este painel.')
         await supabase.auth.signOut()
         router.push('/login?next=/admin')
         return
+      }
+
+      // Se for apenas agenda, trava a visão
+      if (!adminRow && isAgenda) {
+        setIsRestrictedView(true)
+        setMainTab('financeiro')
+        setFinanceTab('bebidas')
       }
 
       setAuthChecking(false)
@@ -910,7 +931,7 @@ const [novoPrecoOrdem, setNovoPrecoOrdem] = useState('')
     const id = searchParams.get('id')
     const data = searchParams.get('data')
 
-    if (id && data) {
+    if (id && data && !isRestrictedView) {
       setMainTab('historico')
       setDataInicial(data)
       setDataFinal(data)
@@ -1878,7 +1899,7 @@ async function exportarRelatorioCobranca() {
   await exportTablePdf({
     filename,
     title: 'Relatório de bebidas de cortesia',
-    subtitle: `Período: ${periodoLabel}`,
+    subtitle: `Responsável: ${currentUserName} | Período: ${periodoLabel}`,
     headers: [
       'Data',
       'Espaço',
@@ -2014,7 +2035,8 @@ async function exportarRelatorioAnexos() {
               <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Admin — Looby Reservas</h1>
               <p className="mt-1 text-sm text-neutral-500">
                 Logado como: <span className="font-semibold text-neutral-900">{userEmail ?? '—'}</span>{' '}
-                <span className="text-neutral-400">(ADMIN)</span>
+                {!isRestrictedView && <span className="text-neutral-400">(ADMIN)</span>}
+                {isRestrictedView && <span className="text-neutral-400">(AGENDA)</span>}
               </p>
               {erroUi ? <p className="mt-3 text-sm text-red-600">{erroUi}</p> : null}
             </div>
@@ -2032,57 +2054,61 @@ async function exportarRelatorioAnexos() {
               >
                 Atualizar
               </button>
-              <button
-  onClick={() => setMainTab('configuracoes')}
-  className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
-    mainTab === 'configuracoes' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-  }`}
->
-  Configurações
-</button>
+              {!isRestrictedView && (
+                <button
+                  onClick={() => setMainTab('configuracoes')}
+                  className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
+                    mainTab === 'configuracoes' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                  }`}
+                >
+                  Configurações
+                </button>
+              )}
               <button onClick={handleLogout} className="rounded-none bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800">
                 Sair
               </button>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => setMainTab('pendentes')}
-              className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
-                mainTab === 'pendentes' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-              }`}
-            >
-              Pendentes
-            </button>
+          {!isRestrictedView && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setMainTab('pendentes')}
+                className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
+                  mainTab === 'pendentes' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                }`}
+              >
+                Pendentes
+              </button>
 
-            <button
-              onClick={() => setMainTab('historico')}
-              className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
-                mainTab === 'historico' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-              }`}
-            >
-              Histórico
-            </button>
+              <button
+                onClick={() => setMainTab('historico')}
+                className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
+                  mainTab === 'historico' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                }`}
+              >
+                Histórico
+              </button>
 
-            <button
-              onClick={() => setMainTab('financeiro')}
-              className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
-                mainTab === 'financeiro' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-              }`}
-            >
-              Financeiro
-            </button>
+              <button
+                onClick={() => setMainTab('financeiro')}
+                className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
+                  mainTab === 'financeiro' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                }`}
+              >
+                Financeiro
+              </button>
 
-            <button
-              onClick={() => setMainTab('graficos')}
-              className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
-                mainTab === 'graficos' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-              }`}
-            >
-              Gráficos
-            </button>
-          </div>
+              <button
+                onClick={() => setMainTab('graficos')}
+                className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
+                  mainTab === 'graficos' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                }`}
+              >
+                Gráficos
+              </button>
+            </div>
+          )}
 
           <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-12">
             <div className="md:col-span-3">
@@ -2201,8 +2227,8 @@ async function exportarRelatorioAnexos() {
                         <ReservationCard
                           r={r}
                           disabled={updatingId === String(r.id)}
-                          onAprovar={() => aprovarReserva(r)}
-                          onCancelar={() => cancelarReserva(r)}
+                          onAprovar={isRestrictedView ? undefined : () => aprovarReserva(r)}
+                          onCancelar={isRestrictedView ? undefined : () => cancelarReserva(r)}
                           onVerComprovante={() => abrirComprovante(r)}
                           onVerDetalhes={() => abrirDetalhesReserva(r)}
                           solicitanteNome={r.user_id ? profileNameById.get(r.user_id) : undefined}
@@ -2604,7 +2630,7 @@ async function exportarRelatorioAnexos() {
                           key={String(r.id)}
                           r={r}
                           disabled={updatingId === String(r.id)}
-                          onCancelar={!isCancelado(r.status) ? () => cancelarReserva(r) : undefined}
+                          onCancelar={!isCancelado(r.status) && !isRestrictedView ? () => cancelarReserva(r) : undefined}
                           onVerComprovante={() => abrirComprovante(r)}
                           onVerDetalhes={() => abrirDetalhesReserva(r)}
                           solicitanteNome={r.user_id ? profileNameById.get(r.user_id) : undefined}
@@ -2622,34 +2648,36 @@ async function exportarRelatorioAnexos() {
                   title={`Financeiro — ${periodoLabel}`}
                   subtitle="Filtros iniciam em hoje. Use os submenus abaixo para alternar entre cobrança e bebidas."
                 >
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => setFinanceTab('cobranca')}
-                      className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
-                        financeTab === 'cobranca' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-                      }`}
-                    >
-                      Relatório de cobrança de camarotes
-                    </button>
+                  {!isRestrictedView && (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setFinanceTab('cobranca')}
+                        className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
+                          financeTab === 'cobranca' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                        }`}
+                      >
+                        Relatório de cobrança de camarotes
+                      </button>
 
-                    <button
-                      onClick={() => setFinanceTab('bebidas')}
-                      className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
-                        financeTab === 'bebidas' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-                      }`}
-                    >
-                      Relatório de bebidas de cortesia
-                    </button>
+                      <button
+                        onClick={() => setFinanceTab('bebidas')}
+                        className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
+                          financeTab === 'bebidas' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                        }`}
+                      >
+                        Relatório de bebidas de cortesia
+                      </button>
 
-                    <button
-                      onClick={() => setFinanceTab('anexos')}
-                      className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
-                        financeTab === 'anexos' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-                      }`}
-                    >
-                      Exportar comprovantes (PDF)
-                    </button>
-                  </div>
+                      <button
+                        onClick={() => setFinanceTab('anexos')}
+                        className={`rounded-none px-4 py-2 text-sm font-semibold transition ${
+                          financeTab === 'anexos' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                        }`}
+                      >
+                        Exportar comprovantes (PDF)
+                      </button>
+                    </div>
+                  )}
                 </Section>
 
                 {financeTab === 'cobranca' ? (

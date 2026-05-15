@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request,
   })
@@ -44,7 +44,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 2. Proteção extra para /admin (verificar se é realmente admin no banco)
+  // 2. Proteção extra para /admin (verificar se é realmente admin no banco ou se tem role 'agenda')
   if (url.pathname.startsWith('/admin') && user) {
     const { data: adminRow } = await supabase
       .from('admins')
@@ -53,8 +53,17 @@ export async function proxy(request: NextRequest) {
       .maybeSingle()
 
     if (!adminRow) {
-      url.pathname = '/'
-      return NextResponse.redirect(url)
+      // Se não está na tabela admins, verifica se tem role 'agenda'
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (profile?.role !== 'agenda') {
+        url.pathname = '/'
+        return NextResponse.redirect(url)
+      }
     }
   }
 
