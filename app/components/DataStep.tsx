@@ -11,6 +11,7 @@ interface DataStepProps {
   isAdmin: boolean
   setStep: (step: 'DATA' | 'MAPA') => void
   sair: () => void
+  eventoDia?: { nome_evento: string } | null
 }
 
 export function DataStep({
@@ -22,6 +23,7 @@ export function DataStep({
   isAdmin,
   setStep,
   sair,
+  eventoDia,
 }: DataStepProps) {
   const router = useRouter()
 
@@ -54,10 +56,7 @@ export function DataStep({
               )}
             </p>
           </div>
-
         </div>
-
-
 
         <div className="mt-6 space-y-2 w-full max-w-full">
           <label className={LABEL_CLASS}>Data do evento</label>

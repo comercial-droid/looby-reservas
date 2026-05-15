@@ -130,6 +130,7 @@ export default function Home() {
 
   const [configPrecos, setConfigPrecos] = useState<ConfigPrecoRow[]>([])
   const [configBebidas, setConfigBebidas] = useState<ConfigBebidaRow[]>([])
+  const [eventoDia, setEventoDia] = useState<{ nome_evento: string } | null | undefined>(undefined)
 
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null)
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
@@ -478,6 +479,29 @@ const isReadOnlyHistorico = useMemo(() => {
     if (step !== 'MAPA') return
     carregarReservasDoDia(dataEvento)
   }, [step, dataEvento])
+
+  useEffect(() => {
+    let active = true
+    async function fetchEvento() {
+      setEventoDia(undefined)
+      const { data } = await supabase
+        .from('eventos_agenda')
+        .select('nome_evento')
+        .eq('data_evento', dataEvento)
+        .eq('ativo', true)
+        .maybeSingle()
+
+      if (!active) return
+
+      if (data) {
+        setEventoDia({ nome_evento: data.nome_evento })
+      } else {
+        setEventoDia(null)
+      }
+    }
+    fetchEvento()
+    return () => { active = false }
+  }, [dataEvento])
 
   useEffect(() => {
     if (authChecking) return
@@ -1262,6 +1286,7 @@ const dataEventoFinal = dataEvento
         isAdmin={isAdmin}
         setStep={setStep}
         sair={sair}
+        eventoDia={eventoDia}
       />
     )
   }
@@ -1486,8 +1511,13 @@ const dataEventoFinal = dataEvento
             <div className={RED_CARD}>
               <div className="mb-5 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-col gap-1">
-                  <h1 className="text-xl font-black uppercase tracking-tighter text-white sm:text-2xl">
+                  <h1 className="flex items-center gap-3 text-xl font-black uppercase tracking-tighter text-white sm:text-2xl">
                     Mapa de Reservas
+                    {eventoDia && (
+                      <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-emerald-400 shadow-sm">
+                        {eventoDia.nome_evento}
+                      </span>
+                    )}
                   </h1>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-white shadow-sm">

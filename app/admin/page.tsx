@@ -2064,6 +2064,14 @@ async function exportarRelatorioAnexos() {
                   Configurações
                 </button>
               )}
+              {isRestrictedView && (
+                <button
+                  onClick={() => router.push('/admin/agenda')}
+                  className="rounded-none bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200 transition"
+                >
+                  Agenda
+                </button>
+              )}
               <button onClick={handleLogout} className="rounded-none bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800">
                 Sair
               </button>
